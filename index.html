@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <title>Plánovač cest autem – Fixace času zastávek</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* Základní reset a globální styly */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f0f2f5;
+      color: #333;
+    }
+    .app-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+      padding: 0 10px;
+    }
+    .sidebar {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .sidebar h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    /* Obal pro vstupy s našeptávačem */
+    .input-wrapper {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    input[type="text"],
+    input[type="time"],
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="time"]:focus,
+    input[type="number"]:focus {
+      border-color: #2c7be5;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      display: none;
+      -webkit-appearance: none;
+    }
+    .suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 100;
+      list-style: none;
+    }
+    .suggestions li {
+      padding: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+    .suggestions li:hover {
+      background-color: #f0f0f0;
+    }
+    /* Dynamické zastávky – každá zastávka jako karta */
+    .stop-field {
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      background: #fafafa;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    /* Řádek pro vstupy v zastávce */
+    .stop-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .stop-row .stop-input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+    .stop-row input.break-time {
+      width: 80px;
+      padding: 8px;
+    }
+    .stop-row button.remove-stop {
+      background: #f44336;
+      border: none;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .stop-row button.remove-stop:hover {
+      background-color: #d32f2f;
+    }
+    /* Nový řádek pro fixaci času zastávky */
+    .fix-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .fix-row input.fixed-time {
+      width: 100%;
+      max-width: 120px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      display: none;
+    }
+    /* Tlačítka naplánovat a export */
+    .sidebar button#planRoute {
+      width: 100%;
+      margin-top: 15px;
+    }
+    .export-buttons {
+      margin-top: 20px;
+      display: none;
+      gap: 10px;
+    }
+    .export-buttons button {
+      flex: 1;
+      padding: 10px;
+    }
+    /* Harmonogram */
+    #schedule {
+      margin-top: 20px;
+      display: none;
+    }
+    #schedule table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #schedule th, #schedule td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      text-align: left;
+    }
+    #schedule th {
+      background-color: #f0f0f0;
+    }
+    /* Mapa */
+    .map-container {
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar">
+      <h1>Plánovač cest autem</h1>
+
+      <!-- Start -->
+      <div class="form-group">
+        <label for="start">Start:</label>
+        <div class="input-wrapper">
+          <input type="text" id="start" placeholder="např. Praha" autocomplete="off" spellcheck="false" />
+          <ul id="start-suggestions" class="suggestions"></ul>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="departure">Čas odjezdu:</label>
+        <input type="time" id="departure" />
+      </div>
+
+      <!-- Zastávky -->
+      <div class="form-group">
+        <label>Zastávky:</label>
+        <div id="stops-container"></div>
+        <button id="add-stop" type="button" style="margin-top:10px;">Přidat zastávku</button>
+      </div>
+
+      <!-- Cíl -->
+      <div class="form-group">
+        <label for="end">Cíl:</label>
+        <div class="input-wrapper">
+          <input type="text" id="end" placeholder="např. Ostrava" autocomplete="off" spellcheck="false" />
+          <ul id="end-suggestions" class="suggestions"></ul>
+        </div>
+      </div>
+
+      <!-- Naplánovat trasu -->
+      <button id="planRoute">Naplánovat trasu</button>
+
+      <!-- Export tlačítka -->
+      <div class="export-buttons" id="export-buttons">
+        <button id="export-google">Export do Google Maps</button>
+      </div>
+
+      <!-- Harmonogram -->
+      <div id="schedule">
+        <h2>Časový harmonogram</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Bod</th>
+              <th>Čas</th>
+              <th>Úsek</th>
+              <th>Celkem</th>
+            </tr>
+          </thead>
+          <tbody id="schedule-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Debounce funkce
+    function debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+
+    // Nominatim API pro našeptávače
+    async function fetchSuggestions(query) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`;
+      try {
+        const response = await fetch(url);
+        return await response.json();
+      } catch (err) {
+        console.error('Chyba při načítání návrhů:', err);
+        return [];
+      }
+    }
+
+    async function showSuggestions(inputElem, suggestionElem) {
+      const query = inputElem.value.trim();
+      if (!query) {
+        suggestionElem.innerHTML = '';
+        return;
+      }
+      const suggestions = await fetchSuggestions(query);
+      suggestionElem.innerHTML = '';
+      suggestions.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item.display_name;
+        li.addEventListener('click', () => {
+          inputElem.value = item.display_name;
+          inputElem.dataset.lat = item.lat;
+          inputElem.dataset.lon = item.lon;
+          suggestionElem.innerHTML = '';
+        });
+        suggestionElem.appendChild(li);
+      });
+    }
+
+    // Start a Cíl
+    const startInput = document.getElementById('start');
+    const endInput = document.getElementById('end');
+    const startSuggestions = document.getElementById('start-suggestions');
+    const endSuggestions = document.getElementById('end-suggestions');
+
+    startInput.addEventListener('input', debounce(() => showSuggestions(startInput, startSuggestions), 400));
+    endInput.addEventListener('input', debounce(() => showSuggestions(endInput, endSuggestions), 400));
+
+    // Dynamické zastávky – vytvoření karty se vstupem pro adresu, fixaci a dobu přestávky
+    const stopsContainer = document.getElementById('stops-container');
+    function createStopField() {
+      const fieldDiv = document.createElement('div');
+      fieldDiv.className = 'stop-field';
+
+      // Label pro adresu
+      const labelAddr = document.createElement('label');
+      labelAddr.textContent = 'Adresa zastávky:';
+      fieldDiv.appendChild(labelAddr);
+
+      // Obal pro adresní input a našeptávač
+      const inputWrapper = document.createElement('div');
+      inputWrapper.className = 'stop-input-wrapper';
+      fieldDiv.appendChild(inputWrapper);
+
+      const stopInput = document.createElement('input');
+      stopInput.type = 'text';
+      stopInput.placeholder = 'např. Brno';
+      stopInput.autocomplete = 'off';
+      stopInput.spellcheck = false;
+      stopInput.className = 'stop-input';
+      inputWrapper.appendChild(stopInput);
+
+      const suggestions = document.createElement('ul');
+      suggestions.className = 'suggestions';
+      inputWrapper.appendChild(suggestions);
+
+      stopInput.addEventListener('input', debounce(() => showSuggestions(stopInput, suggestions), 400));
+
+      // Řádek pro fixaci času
+      const fixRow = document.createElement('div');
+      fixRow.className = 'fix-row';
+      // Checkbox pro fixaci
+      const fixCheckbox = document.createElement('input');
+      fixCheckbox.type = 'checkbox';
+      fixCheckbox.id = 'fix-' + Date.now();
+      fixRow.appendChild(fixCheckbox);
+      // Label pro checkbox
+      const fixLabel = document.createElement('label');
+      fixLabel.textContent = 'Fixovat čas příjezdu';
+      fixLabel.setAttribute('for', fixCheckbox.id);
+      fixRow.appendChild(fixLabel);
+      // Vstup pro fixovaný čas – skrytý, dokud není checkbox zaškrtnutý
+      const fixedTimeInput = document.createElement('input');
+      fixedTimeInput.type = 'time';
+      fixedTimeInput.className = 'fixed-time';
+      fixedTimeInput.style.display = 'none';
+      fixRow.appendChild(fixedTimeInput);
+      // Toggle zobrazení fixovaného času
+      fixCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          fixedTimeInput.style.display = 'block';
+        } else {
+          fixedTimeInput.style.display = 'none';
+          fixedTimeInput.value = '';
+        }
+      });
+      fieldDiv.appendChild(fixRow);
+
+      // Label a vstup pro dobu přestávky
+      const labelBreak = document.createElement('label');
+      labelBreak.textContent = 'Přestávka (min):';
+      fieldDiv.appendChild(labelBreak);
+
+      const breakInput = document.createElement('input');
+      breakInput.type = 'number';
+      breakInput.value = 30;
+      breakInput.min = 0;
+      breakInput.className = 'break-time';
+      breakInput.placeholder = '30';
+      breakInput.title = "Délka přestávky v minutách";
+      fieldDiv.appendChild(breakInput);
+
+      // Tlačítko odstranění zastávky
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.className = 'remove-stop';
+      removeBtn.title = 'Odstranit zastávku';
+      removeBtn.addEventListener('click', () => {
+        fieldDiv.remove();
+      });
+      fieldDiv.appendChild(removeBtn);
+
+      return fieldDiv;
+    }
+
+    stopsContainer.appendChild(createStopField());
+    document.getElementById('add-stop').addEventListener('click', () => {
+      stopsContainer.appendChild(createStopField());
+    });
+
+    // Inicializace mapy
+    var map = L.map('map').setView([50.0755, 14.4378], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+    async function geocodeAddress(address, inputElem) {
+      if (inputElem.dataset.lat && inputElem.dataset.lon) {
+        return [parseFloat(inputElem.dataset.lat), parseFloat(inputElem.dataset.lon)];
+      }
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(address)}`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          inputElem.dataset.lat = data[0].lat;
+          inputElem.dataset.lon = data[0].lon;
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+      } catch (err) {
+        console.error('Chyba při geokódování adresy:', err);
+      }
+      return null;
+    }
+
+    async function fetchDrivingRoute(points) {
+      const coords = points.map(pt => `${pt[1]},${pt[0]}`).join(';');
+      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data && data.routes && data.routes.length > 0) {
+          return {
+            geometry: data.routes[0].geometry,
+            legs: data.routes[0].legs
+          };
+        } else {
+          console.error('Neplatná odpověď z OSRM API', data);
+          return null;
+        }
+      } catch (err) {
+        console.error('Chyba při načítání trasy z OSRM API:', err);
+        return null;
+      }
+    }
+
+    let currentRoute = { start: null, stops: [], end: null };
+
+    document.getElementById('planRoute').addEventListener('click', async () => {
+      const departureTimeStr = document.getElementById('departure').value;
+      if (!startInput.value || !endInput.value) {
+        alert('Zadejte alespoň start a cíl.');
+        return;
+      }
+      if (!departureTimeStr) {
+        alert('Zadejte prosím čas odjezdu.');
+        return;
+      }
+
+      // Geokódování startu a cíle
+      const startCoords = await geocodeAddress(startInput.value, startInput);
+      const endCoords = await geocodeAddress(endInput.value, endInput);
+      if (!startCoords || !endCoords) {
+        alert('Nepodařilo se geokódovat zadanou adresu.');
+        return;
+      }
+      currentRoute.start = { coords: startCoords, addr: startInput.value };
+      currentRoute.end = { coords: endCoords, addr: endInput.value };
+
+      // Zpracování zastávek
+      const stopFields = stopsContainer.querySelectorAll('.stop-field');
+      currentRoute.stops = [];
+      for (let field of stopFields) {
+        const stopInput = field.querySelector('.stop-input');
+        if (stopInput.value.trim()) {
+          const coords = await geocodeAddress(stopInput.value, stopInput);
+          const breakInput = field.querySelector('.break-time');
+          const breakDuration = parseInt(breakInput.value) || 30;
+          const fixCheckbox = field.querySelector('input[type="checkbox"]');
+          const fixedTimeInput = field.querySelector('input.fixed-time');
+          let fixed = false;
+          let fixedTime = "";
+          if (fixCheckbox && fixCheckbox.checked && fixedTimeInput.value) {
+            fixed = true;
+            fixedTime = fixedTimeInput.value;
+          }
+          if (coords) {
+            currentRoute.stops.push({ coords, addr: stopInput.value, break: breakDuration, fixed, fixedTime });
+          }
+        }
+      }
+
+      // Sestavení trasy
+      let routePoints = [currentRoute.start.coords];
+      currentRoute.stops.forEach(s => routePoints.push(s.coords));
+      routePoints.push(currentRoute.end.coords);
+
+      // Vyčištění mapy
+      map.eachLayer(layer => {
+        if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+          map.removeLayer(layer);
+        }
+      });
+
+      // Přidání markerů
+      L.marker(startCoords).addTo(map).bindPopup("Start: " + startInput.value);
+      currentRoute.stops.forEach((stop, i) => {
+        L.marker(stop.coords).addTo(map).bindPopup("Zastávka " + (i + 1) + ": " + stop.addr);
+      });
+      L.marker(endCoords).addTo(map).bindPopup("Cíl: " + endInput.value);
+
+      // Získání trasy z OSRM API
+      const routeData = await fetchDrivingRoute(routePoints);
+      if (!routeData) {
+        alert('Nepodařilo se načíst trasu z OSRM API.');
+        return;
+      }
+      const routeCoords = routeData.geometry.coordinates.map(c => [c[1], c[0]]);
+      L.polyline(routeCoords, { color: 'blue' }).addTo(map);
+      const bounds = L.latLngBounds(routeCoords);
+      map.fitBounds(bounds);
+
+      // Výpočet harmonogramu
+      let scheduleItems = [];
+      let cumulativeDistance = 0;
+      let departureTime = new Date();
+      const [depH, depM] = departureTimeStr.split(':').map(Number);
+      departureTime.setHours(depH, depM, 0, 0);
+      scheduleItems.push({
+        label: "Odjezd ze Start (" + currentRoute.start.addr + ")",
+        time: new Date(departureTime),
+        segment: "",
+        cumulative: "0 km"
+      });
+      let currentTime = new Date(departureTime);
+      for (let i = 0; i < routeData.legs.length; i++) {
+        const leg = routeData.legs[i];
+        const travelTimeMs = leg.duration * 1000;
+        const legDistanceMeters = leg.distance;
+        const legDistanceStr = (legDistanceMeters / 1000).toFixed(1) + " km";
+        cumulativeDistance += legDistanceMeters;
+        const cumulativeStr = (cumulativeDistance / 1000).toFixed(1) + " km";
+        
+        // Pokud existuje fixace pro tuto zastávku, použijeme ji
+        if (i < currentRoute.stops.length && currentRoute.stops[i].fixed && currentRoute.stops[i].fixedTime) {
+          // Převod fixovaného času (HH:MM) na Date (s použitím stejného dne jako odjezd)
+          const [fixH, fixM] = currentRoute.stops[i].fixedTime.split(':').map(Number);
+          currentTime = new Date(departureTime.getFullYear(), departureTime.getMonth(), departureTime.getDate(), fixH, fixM, 0, 0);
+        } else {
+          currentTime = new Date(currentTime.getTime() + travelTimeMs);
+        }
+    
+        if (i < currentRoute.stops.length) {
+          scheduleItems.push({
+            label: "Příjezd do Zastávky " + (i + 1) + " (" + currentRoute.stops[i].addr + ")",
+            time: new Date(currentTime),
+            segment: legDistanceStr,
+            cumulative: cumulativeStr
+          });
+          const breakMs = currentRoute.stops[i].break * 60 * 1000;
+          currentTime = new Date(currentTime.getTime() + breakMs);
+          scheduleItems.push({
+            label: "Odjezd ze Zastávky " + (i + 1) + " (" + currentRoute.stops[i].addr + ")",
+            time: new Date(currentTime),
+            segment: "",
+            cumulative: cumulativeStr
+          });
+        } else {
+          scheduleItems.push({
+            label: "Příjezd do Cíle (" + currentRoute.end.addr + ")",
+            time: new Date(currentTime),
+            segment: legDistanceStr,
+            cumulative: cumulativeStr
+          });
+        }
+      }
+    
+      const scheduleBody = document.getElementById("schedule-body");
+      scheduleBody.innerHTML = "";
+      scheduleItems.forEach(item => {
+        const row = document.createElement('tr');
+        const h = item.time.getHours().toString().padStart(2, '0');
+        const m = item.time.getMinutes().toString().padStart(2, '0');
+        row.innerHTML = `
+          <td>${item.label}</td>
+          <td>${h}:${m}</td>
+          <td>${item.segment}</td>
+          <td>${item.cumulative}</td>
+        `;
+        scheduleBody.appendChild(row);
+      });
+      document.getElementById("schedule").style.display = "block";
+      document.getElementById('export-buttons').style.display = 'flex';
+    });
+    
+    document.getElementById('export-google').addEventListener('click', () => {
+      if (!currentRoute.start || !currentRoute.end) return;
+      const s = currentRoute.start.coords;
+      const e = currentRoute.end.coords;
+      let googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${s[0]},${s[1]}&destination=${e[0]},${e[1]}`;
+      if (currentRoute.stops.length > 0) {
+        const waypoints = currentRoute.stops.map(stop => `${stop.coords[0]},${stop.coords[1]}`).join('|');
+        googleUrl += `&waypoints=${encodeURIComponent(waypoints)}`;
+      }
+      window.open(googleUrl, '_blank');
+    });
+  </script>
+</body>
+</html>
