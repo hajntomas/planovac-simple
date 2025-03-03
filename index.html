@@ -266,9 +266,10 @@
       };
     }
 
-    // Nominatim API pro našeptávače
+    // Vylepšená funkce pro API dotaz na Nominatim
     async function fetchSuggestions(query) {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`;
+      // Přidáváme parametry pro lepší výsledky vyhledávání
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
       try {
         const response = await fetch(url);
         return await response.json();
@@ -278,21 +279,105 @@
       }
     }
 
+    // Funkce pro formátování adres v požadovaném formátu
+    function formatAddress(item) {
+      if (!item.address) return item.display_name;
+      
+      let parts = [];
+      
+      // Ulice/název + číslo domu
+      if (item.address.road || item.address.street || item.address.neighbourhood) {
+        let street = item.address.road || item.address.street || item.address.neighbourhood;
+        let houseNumber = item.address.house_number || '';
+        if (street && houseNumber) {
+          parts.push(`${street} ${houseNumber}`);
+        } else if (street) {
+          parts.push(street);
+        }
+      }
+      
+      // Obec/město
+      if (item.address.city || item.address.town || item.address.village || item.address.municipality) {
+        parts.push(item.address.city || item.address.town || item.address.village || item.address.municipality);
+      }
+      
+      // PSČ
+      if (item.address.postcode) {
+        parts.push(item.address.postcode);
+      }
+      
+      // Pokud jde o firmu/POI, přidáme název na začátek
+      if (item.type === 'amenity' || item.type === 'shop' || item.type === 'office') {
+        let name = item.name || item.display_name.split(',')[0];
+        return `${name}, ${parts.join(', ')}`;
+      }
+      
+      // Výsledný formát
+      return parts.join(', ');
+    }
+
+    // Funkce pro vyhledávání míst a firem
+    async function searchPlacesAndBusinesses(query) {
+      // Vyhledávání míst (standardní)
+      const places = await fetchSuggestions(query);
+      
+      // Vyhledávání podle firem - přidáváme parametry pro podniky
+      const businessQuery = `${encodeURIComponent(query)}`;
+      const businessUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&featuretype=amenity&featuretype=shop&featuretype=office&q=${businessQuery}`;
+      
+      let businesses = [];
+      try {
+        const response = await fetch(businessUrl);
+        businesses = await response.json();
+      } catch (err) {
+        console.error('Chyba při vyhledávání firem:', err);
+      }
+      
+      // Eliminace duplicit a spojení výsledků
+      const combinedResults = [...places];
+      
+      // Přidáme pouze firmy, které ještě nejsou v seznamu
+      businesses.forEach(business => {
+        const isDuplicate = places.some(place => 
+          place.place_id === business.place_id || 
+          place.display_name === business.display_name
+        );
+        
+        if (!isDuplicate) {
+          combinedResults.push(business);
+        }
+      });
+      
+      return combinedResults;
+    }
+
+    // Upravená funkce pro zobrazení našeptávače
     async function showSuggestions(inputElem, suggestionElem) {
       const query = inputElem.value.trim();
       if (!query) {
         suggestionElem.innerHTML = '';
         return;
       }
-      const suggestions = await fetchSuggestions(query);
+      
+      // Použijeme novou funkci pro vyhledávání míst a firem
+      const suggestions = await searchPlacesAndBusinesses(query);
       suggestionElem.innerHTML = '';
+      
       suggestions.forEach(item => {
         const li = document.createElement('li');
-        li.textContent = item.display_name;
+        // Použijeme vlastní formátování adresy
+        li.textContent = formatAddress(item);
+        // Uchováme původní položku pro metadata
+        li.dataset.placeId = item.place_id;
+        li.dataset.displayName = item.display_name;
+        
         li.addEventListener('click', () => {
-          inputElem.value = item.display_name;
+          // Nastavíme hodnotu jako formátovanou adresu
+          inputElem.value = li.textContent;
+          // Zachováme souřadnice pro další použití
           inputElem.dataset.lat = item.lat;
           inputElem.dataset.lon = item.lon;
+          // Ukryjeme našeptávač
           suggestionElem.innerHTML = '';
         });
         suggestionElem.appendChild(li);
