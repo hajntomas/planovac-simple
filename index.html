@@ -266,9 +266,9 @@
       };
     }
 
-    // Vylepšená funkce pro API dotaz na Nominatim
+    // Optimalizovaná funkce pro API dotaz na Nominatim
     async function fetchSuggestions(query) {
-      // Přidáváme parametry pro lepší výsledky vyhledávání
+      // Přidané parametry pro vyhledávání míst i firem v jednom dotazu
       const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
       try {
         const response = await fetch(url);
@@ -279,7 +279,7 @@
       }
     }
 
-    // Funkce pro formátování adres v požadovaném formátu
+    // Vylepšená funkce pro formátování adres včetně firem
     function formatAddress(item) {
       if (!item.address) return item.display_name;
       
@@ -306,52 +306,38 @@
         parts.push(item.address.postcode);
       }
       
-      // Pokud jde o firmu/POI, přidáme název na začátek
-      if (item.type === 'amenity' || item.type === 'shop' || item.type === 'office') {
-        let name = item.name || item.display_name.split(',')[0];
-        return `${name}, ${parts.join(', ')}`;
+      // Lépe detekujeme, zda jde o firmu/POI a zobrazíme název
+      let isBusinessOrPOI = false;
+      let businessName = '';
+      
+      // Kontrola všech možných zdrojů názvu firmy/POI
+      if (item.name) {
+        businessName = item.name;
+        isBusinessOrPOI = true;
+      } else if (item.type === 'amenity' || item.type === 'shop' || item.type === 'office') {
+        businessName = item.display_name.split(',')[0];
+        isBusinessOrPOI = true;
+      } else if (item.class === 'amenity' || item.class === 'shop' || item.class === 'office') {
+        businessName = item.display_name.split(',')[0];
+        isBusinessOrPOI = true;
+      } else if (item.address && (item.address.amenity || item.address.shop || item.address.office)) {
+        businessName = item.address.amenity || item.address.shop || item.address.office;
+        isBusinessOrPOI = true;
       }
       
-      // Výsledný formát
-      return parts.join(', ');
-    }
-
-    // Funkce pro vyhledávání míst a firem
-    async function searchPlacesAndBusinesses(query) {
-      // Vyhledávání míst (standardní)
-      const places = await fetchSuggestions(query);
+      // Formátovaná adresa
+      const formattedAddress = parts.join(', ');
       
-      // Vyhledávání podle firem - přidáváme parametry pro podniky
-      const businessQuery = `${encodeURIComponent(query)}`;
-      const businessUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&featuretype=amenity&featuretype=shop&featuretype=office&q=${businessQuery}`;
-      
-      let businesses = [];
-      try {
-        const response = await fetch(businessUrl);
-        businesses = await response.json();
-      } catch (err) {
-        console.error('Chyba při vyhledávání firem:', err);
+      // Pokud jde o firmu, přidáme název firmy před adresu
+      if (isBusinessOrPOI && businessName) {
+        return `${businessName}, ${formattedAddress}`;
       }
       
-      // Eliminace duplicit a spojení výsledků
-      const combinedResults = [...places];
-      
-      // Přidáme pouze firmy, které ještě nejsou v seznamu
-      businesses.forEach(business => {
-        const isDuplicate = places.some(place => 
-          place.place_id === business.place_id || 
-          place.display_name === business.display_name
-        );
-        
-        if (!isDuplicate) {
-          combinedResults.push(business);
-        }
-      });
-      
-      return combinedResults;
+      // Jinak vrátíme jen adresu
+      return formattedAddress;
     }
 
-    // Upravená funkce pro zobrazení našeptávače
+    // Upravená funkce pro zobrazení našeptávače - nyní jednodušší a rychlejší
     async function showSuggestions(inputElem, suggestionElem) {
       const query = inputElem.value.trim();
       if (!query) {
@@ -359,17 +345,18 @@
         return;
       }
       
-      // Použijeme novou funkci pro vyhledávání míst a firem
-      const suggestions = await searchPlacesAndBusinesses(query);
+      // Získáme data z Nominatim API
+      const suggestions = await fetchSuggestions(query);
       suggestionElem.innerHTML = '';
+      
+      if (suggestions.length === 0) {
+        return; // Žádné výsledky
+      }
       
       suggestions.forEach(item => {
         const li = document.createElement('li');
-        // Použijeme vlastní formátování adresy
+        // Použijeme vylepšené formátování adresy
         li.textContent = formatAddress(item);
-        // Uchováme původní položku pro metadata
-        li.dataset.placeId = item.place_id;
-        li.dataset.displayName = item.display_name;
         
         li.addEventListener('click', () => {
           // Nastavíme hodnotu jako formátovanou adresu
