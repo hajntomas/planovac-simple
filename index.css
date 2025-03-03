@@ -1,1 +1,21 @@
+/* Obal pro vstup s našeptávačem */
+.input-wrapper, .stop-input-wrapper {
+  position: relative;
+  z-index: 1; /* vytvoří kontext pro absolutní umístění */
+}
 
+/* Našeptávač – zajistíme, že bude mít vysoký z-index a bude stejně široký jako input */
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 9999; /* zvýšený z-index */
+  list-style: none;
+}
