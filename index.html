@@ -2,192 +2,435 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plánovač cest autem – Fixace času zastávek</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
   <style>
-    /* Základní reset a globální styly */
+    /* Moderní barevná paleta a proměnné */
+    :root {
+      --primary-color: #2c7be5;
+      --primary-light: #eaf2fd;
+      --primary-dark: #1a68d1;
+      --secondary-color: #6c757d;
+      --success-color: #00b074;
+      --danger-color: #e63757;
+      --warning-color: #f6c343;
+      --dark-color: #12263f;
+      --light-color: #f9fbfd;
+      --border-color: #e3ebf6;
+      --text-color: #283e59;
+      --text-muted: #95aac9;
+      --shadow-sm: 0 .125rem .25rem rgba(18,38,63,.075);
+      --shadow: 0 .5rem 1rem rgba(18,38,63,.15);
+      --shadow-lg: 0 1rem 2rem rgba(18,38,63,.175);
+      --radius: 0.375rem;
+      --transition: all .2s ease;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* Základní styly */
     *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
+    
     body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      background-color: #f0f2f5;
-      color: #333;
+      font-family: var(--font-sans);
+      color: var(--text-color);
+      background-color: #f5f8fb;
+      line-height: 1.6;
     }
+
+    /* Kontejner aplikace */
     .app-container {
-      max-width: 1200px;
-      margin: 20px auto;
+      max-width: 1280px;
+      margin: 2rem auto;
       display: grid;
       grid-template-columns: 350px 1fr;
-      gap: 20px;
-      padding: 0 10px;
+      gap: 1.5rem;
+      padding: 0 1rem;
     }
+
+    /* Boční panel */
     .sidebar {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      background: white;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      height: fit-content;
+      position: sticky;
+      top: 1.5rem;
     }
+
     .sidebar h1 {
-      font-size: 22px;
-      margin-bottom: 20px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--dark-color);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
     }
+
+    /* Formulářové skupiny */
     .form-group {
-      margin-bottom: 15px;
+      margin-bottom: 1.25rem;
     }
-    label {
+
+    .form-group label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--dark-color);
+      font-size: 0.9375rem;
     }
-    /* Obal pro vstupy s našeptávačem */
-    .input-wrapper {
-      position: relative;
-      margin-bottom: 10px;
-    }
+
+    /* Vstupy */
     input[type="text"],
     input[type="time"],
     input[type="number"] {
+      display: block;
       width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9375rem;
+      font-weight: 400;
+      line-height: 1.5;
+      color: var(--text-color);
+      background-color: #fff;
+      background-clip: padding-box;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      transition: var(--transition);
     }
+
     input[type="text"]:focus,
     input[type="time"]:focus,
     input[type="number"]:focus {
-      border-color: #2c7be5;
+      border-color: var(--primary-color);
+      outline: 0;
+      box-shadow: 0 0 0 0.2rem rgba(44, 123, 229, 0.25);
     }
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button,
-    input[type="time"]::-webkit-calendar-picker-indicator {
-      display: none;
-      -webkit-appearance: none;
+
+    /* Obal pro vstupy s našeptávačem */
+    .input-wrapper, .stop-input-wrapper {
+      position: relative;
+      margin-bottom: 10px;
+      z-index: 10;
     }
+
+    /* Našeptávač */
     .suggestions {
       position: absolute;
       top: 100%;
       left: 0;
       width: 100%;
-      background: #fff;
-      border: 1px solid #ccc;
+      background: white;
+      border: 1px solid var(--border-color);
       border-top: none;
-      border-radius: 0 0 4px 4px;
-      max-height: 150px;
+      border-radius: 0 0 var(--radius) var(--radius);
+      max-height: 200px;
       overflow-y: auto;
-      z-index: 100;
+      z-index: 1000;
       list-style: none;
+      box-shadow: var(--shadow);
     }
+
     .suggestions li {
-      padding: 8px;
-      font-size: 14px;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--text-color);
       cursor: pointer;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
     }
+
     .suggestions li:hover {
-      background-color: #f0f0f0;
+      background-color: var(--primary-light);
     }
-    /* Dynamické zastávky – každá zastávka jako karta */
+
+    .suggestions li:last-child {
+      border-bottom: none;
+    }
+
+    /* Zastávky - karta */
     .stop-field {
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      background: #fafafa;
-      padding: 10px;
-      margin-bottom: 10px;
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
     }
-    /* Řádek pro vstupy v zastávce */
-    .stop-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+
+    .stop-field:hover {
+      box-shadow: var(--shadow);
     }
-    .stop-row .stop-input-wrapper {
-      flex: 1;
-      position: relative;
-    }
-    .stop-row input.break-time {
-      width: 80px;
-      padding: 8px;
-    }
-    .stop-row button.remove-stop {
-      background: #f44336;
-      border: none;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .stop-row button.remove-stop:hover {
-      background-color: #d32f2f;
-    }
-    /* Nový řádek pro fixaci času zastávky */
+
+    /* Fixace času */
     .fix-row {
       display: flex;
       align-items: center;
+      margin: 0.75rem 0;
       gap: 5px;
-      margin-top: 5px;
     }
+
+    .fix-row input[type="checkbox"] {
+      margin-right: 0.5rem;
+    }
+
     .fix-row input.fixed-time {
-      width: 100%;
-      max-width: 120px;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-      display: none;
+      max-width: 150px;
+      margin-left: 1rem;
     }
-    /* Tlačítka naplánovat a export */
-    .sidebar button#planRoute {
-      width: 100%;
-      margin-top: 15px;
+
+    /* Tlačítka */
+    button {
+      display: inline-block;
+      font-weight: 500;
+      color: white;
+      text-align: center;
+      vertical-align: middle;
+      user-select: none;
+      background-color: var(--primary-color);
+      border: 1px solid transparent;
+      padding: 0.5rem 1rem;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      border-radius: var(--radius);
+      transition: var(--transition);
+      cursor: pointer;
     }
+
+    button:hover {
+      background-color: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
+    button:focus {
+      outline: 0;
+      box-shadow: 0 0 0 0.2rem rgba(44, 123, 229, 0.25);
+    }
+
+    button.remove-stop {
+      background-color: var(--danger-color);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      margin-left: auto;
+    }
+
+    button.remove-stop:hover {
+      background-color: #d92b48;
+    }
+
+    button#add-stop {
+      background-color: var(--secondary-color);
+      margin-top: 0.5rem;
+      width: 100%;
+    }
+
+    button#add-stop:hover {
+      background-color: #5a6268;
+    }
+
+    button#planRoute {
+      background-color: var(--success-color);
+      margin-top: 1.25rem;
+      width: 100%;
+    }
+
+    button#planRoute:hover {
+      background-color: #00945f;
+    }
+
     .export-buttons {
-      margin-top: 20px;
+      margin-top: 1.5rem;
       display: none;
-      gap: 10px;
+      gap: 0.75rem;
     }
+
     .export-buttons button {
       flex: 1;
-      padding: 10px;
+      background-color: var(--secondary-color);
     }
-    /* Harmonogram */
+
+    .export-buttons button:hover {
+      background-color: #5a6268;
+    }
+
+    /* Harmonogram - vylepšený design */
     #schedule {
-      margin-top: 20px;
+      margin-top: 2rem;
       display: none;
+      background-color: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
+
+    #schedule h2 {
+      background-color: var(--primary-color);
+      color: white;
+      margin: 0;
+      padding: 0.75rem 1rem;
+      font-size: 1.25rem;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #schedule h2 .actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    #schedule h2 button {
+      background-color: rgba(255, 255, 255, 0.2);
+      font-size: 0.875rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radius);
+    }
+
+    #schedule h2 button:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+
     #schedule table {
       width: 100%;
       border-collapse: collapse;
+      margin: 0;
     }
-    #schedule th, #schedule td {
-      padding: 8px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-      text-align: left;
-    }
+
     #schedule th {
-      background-color: #f0f0f0;
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border-color);
     }
+
+    #schedule td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.9375rem;
+      transition: var(--transition);
+    }
+
+    #schedule tr:hover td {
+      background-color: rgba(44, 123, 229, 0.05);
+    }
+
+    #schedule tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Odlišení typů řádků v harmonogramu */
+    #schedule tr.departure td {
+      border-left: 3px solid var(--success-color);
+    }
+
+    #schedule tr.arrival td {
+      border-left: 3px solid var(--primary-color);
+    }
+
+    #schedule tr.final-arrival td {
+      border-left: 3px solid var(--danger-color);
+      font-weight: 600;
+    }
+
+    #schedule tr.fixed-time td {
+      background-color: rgba(246, 195, 67, 0.1);
+    }
+
+    #schedule tr.fixed-time td:first-child {
+      border-left: 3px solid var(--warning-color);
+    }
+
+    #schedule td:nth-child(2) {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #schedule td:nth-child(3),
+    #schedule td:nth-child(4) {
+      text-align: right;
+      font-family: monospace;
+      white-space: nowrap;
+    }
+
+    /* Tlačítka pro tisk a export harmonogramu */
+    #schedule-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    #schedule-actions button {
+      font-size: 0.875rem;
+      padding: 0.375rem 0.75rem;
+      background-color: var(--secondary-color);
+    }
+
+    #schedule-actions button i {
+      margin-right: 0.25rem;
+    }
+
     /* Mapa */
     .map-container {
-      background: #fff;
-      border-radius: 8px;
+      background: white;
+      border-radius: var(--radius);
       overflow: hidden;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow);
+      height: 100%;
     }
+
     #map {
       width: 100%;
       height: 100%;
-      min-height: 400px;
+      min-height: 600px;
+    }
+
+    /* Responzivní design */
+    @media (max-width: 992px) {
+      .app-container {
+        grid-template-columns: 1fr;
+      }
+      
+      .sidebar {
+        position: static;
+      }
+    }
+
+    /* Tiskový styl pro harmonogram */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #schedule, #schedule * {
+        visibility: visible;
+      }
+      #schedule {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        box-shadow: none;
+      }
+      #schedule .actions {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -213,7 +456,9 @@
       <div class="form-group">
         <label>Zastávky:</label>
         <div id="stops-container"></div>
-        <button id="add-stop" type="button" style="margin-top:10px;">Přidat zastávku</button>
+        <button id="add-stop" type="button">
+          <i class="fas fa-plus"></i> Přidat zastávku
+        </button>
       </div>
 
       <!-- Cíl -->
@@ -226,16 +471,33 @@
       </div>
 
       <!-- Naplánovat trasu -->
-      <button id="planRoute">Naplánovat trasu</button>
+      <button id="planRoute">
+        <i class="fas fa-route"></i> Naplánovat trasu
+      </button>
 
       <!-- Export tlačítka -->
       <div class="export-buttons" id="export-buttons">
-        <button id="export-google">Export do Google Maps</button>
+        <button id="export-google">
+          <i class="fab fa-google"></i> Export do Google Maps
+        </button>
       </div>
 
-      <!-- Harmonogram -->
+      <!-- Vylepšený časový harmonogram -->
       <div id="schedule">
-        <h2>Časový harmonogram</h2>
+        <h2>
+          Časový harmonogram
+          <div class="actions">
+            <button id="print-schedule" title="Vytisknout harmonogram">
+              <i class="fas fa-print"></i> Tisk
+            </button>
+            <button id="copy-schedule" title="Kopírovat do schránky">
+              <i class="fas fa-copy"></i> Kopírovat
+            </button>
+            <button id="export-schedule-pdf" title="Export do PDF">
+              <i class="fas fa-file-pdf"></i> PDF
+            </button>
+          </div>
+        </h2>
         <table>
           <thead>
             <tr>
@@ -254,6 +516,9 @@
       <div id="map"></div>
     </div>
   </div>
+
+  <!-- Skrytý textarea pro kopírování do schránky -->
+  <textarea id="copy-content" style="position: absolute; left: -9999px;"></textarea>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
@@ -462,7 +727,7 @@
       // Tlačítko odstranění zastávky
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.innerHTML = '&times;';
+      removeBtn.innerHTML = '<i class="fas fa-times"></i>';
       removeBtn.className = 'remove-stop';
       removeBtn.title = 'Odstranit zastávku';
       removeBtn.addEventListener('click', () => {
@@ -633,7 +898,8 @@
             label: "Příjezd do Zastávky " + (i + 1) + " (" + currentRoute.stops[i].addr + ")",
             time: new Date(currentTime),
             segment: legDistanceStr,
-            cumulative: cumulativeStr
+            cumulative: cumulativeStr,
+            fixed: currentRoute.stops[i].fixed
           });
           const breakMs = currentRoute.stops[i].break * 60 * 1000;
           currentTime = new Date(currentTime.getTime() + breakMs);
@@ -653,12 +919,36 @@
         }
       }
     
+      // Vylepšená funkce pro generování harmonogramu
+      generateSchedule(scheduleItems);
+    });
+    
+    // Vylepšená funkce pro generování harmonogramu
+    function generateSchedule(scheduleItems) {
       const scheduleBody = document.getElementById("schedule-body");
       scheduleBody.innerHTML = "";
-      scheduleItems.forEach(item => {
+      
+      scheduleItems.forEach((item, index) => {
         const row = document.createElement('tr');
         const h = item.time.getHours().toString().padStart(2, '0');
         const m = item.time.getMinutes().toString().padStart(2, '0');
+        
+        // Určení typu řádku pro vizuální odlišení
+        if (item.label.includes("Odjezd ze Start")) {
+          row.className = "departure";
+        } else if (item.label.includes("Odjezd ze Zastávky")) {
+          row.className = "departure";
+        } else if (item.label.includes("Příjezd do Cíle")) {
+          row.className = "final-arrival";
+        } else if (item.label.includes("Příjezd do Zastávky")) {
+          row.className = "arrival";
+          
+          // Kontrola jestli je zastávka s fixovaným časem
+          if (item.fixed) {
+            row.className += " fixed-time";
+          }
+        }
+        
         row.innerHTML = `
           <td>${item.label}</td>
           <td>${h}:${m}</td>
@@ -667,9 +957,11 @@
         `;
         scheduleBody.appendChild(row);
       });
+      
+      // Zobrazení harmonogramu a export tlačítek
       document.getElementById("schedule").style.display = "block";
       document.getElementById('export-buttons').style.display = 'flex';
-    });
+    }
     
     document.getElementById('export-google').addEventListener('click', () => {
       if (!currentRoute.start || !currentRoute.end) return;
@@ -682,6 +974,56 @@
       }
       window.open(googleUrl, '_blank');
     });
+    
+    // Funkce pro tisk harmonogramu
+    function printSchedule() {
+      window.print();
+    }
+
+    // Funkce pro kopírování harmonogramu do schránky
+    function copyScheduleToClipboard() {
+      const scheduleTable = document.getElementById('schedule');
+      const rows = scheduleTable.querySelectorAll('tbody tr');
+      let textContent = "ČASOVÝ HARMONOGRAM CESTY\n\n";
+      
+      rows.forEach(row => {
+        const columns = row.querySelectorAll('td');
+        textContent += `${columns[0].textContent} - ${columns[1].textContent}`;
+        
+        if (columns[2].textContent.trim() !== '') {
+          textContent += ` (${columns[2].textContent})`;
+        }
+        
+        textContent += `\nCelková vzdálenost: ${columns[3].textContent}\n\n`;
+      });
+      
+      const copyContent = document.getElementById('copy-content');
+      copyContent.value = textContent;
+      copyContent.select();
+      document.execCommand('copy');
+      
+      alert('Harmonogram byl zkopírován do schránky!');
+    }
+
+    // Funkce pro export do PDF
+    function exportScheduleToPDF() {
+      // Zde by byla implementace exportu do PDF
+      // Pro plnou implementaci by bylo potřeba přidat knihovnu jako jspdf
+      alert('Pro export do PDF je potřeba přidat knihovnu jsPDF. Zatím prosím použijte tisk do PDF.');
+    }
+
+    // Přidání posluchačů událostí
+    document.addEventListener('DOMContentLoaded', function() {
+      // Přidání posluchačů pro tlačítka exportu
+      document.getElementById('print-schedule').addEventListener('click', printSchedule);
+      document.getElementById('copy-schedule').addEventListener('click', copyScheduleToClipboard);
+      document.getElementById('export-schedule-pdf').addEventListener('click', exportScheduleToPDF);
+    });
+    
+    // Posluchače pro tlačítka harmonogramu
+    document.getElementById('print-schedule').addEventListener('click', printSchedule);
+    document.getElementById('copy-schedule').addEventListener('click', copyScheduleToClipboard);
+    document.getElementById('export-schedule-pdf').addEventListener('click', exportScheduleToPDF);
   </script>
 </body>
 </html>
