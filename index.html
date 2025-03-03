@@ -266,17 +266,78 @@
       };
     }
 
-    // Optimalizovaná funkce pro API dotaz na Nominatim
+    // Vylepšená funkce pro vyhledávání - zkouší více kombinací dotazů
     async function fetchSuggestions(query) {
-      // Přidané parametry pro vyhledávání míst i firem v jednom dotazu
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
-      try {
-        const response = await fetch(url);
-        return await response.json();
-      } catch (err) {
-        console.error('Chyba při načítání návrhů:', err);
-        return [];
+      // Rozdělíme dotaz na části, abychom mohli vytvořit různé kombinace
+      const parts = query.trim().split(/\s+/);
+      const results = [];
+      
+      // Pokud máme více než jedno slovo, můžeme zkusit různé kombinace
+      if (parts.length > 1) {
+        // 1. Původní dotaz - přímé vyhledávání
+        await appendResults(query);
+        
+        // 2. Pokud je poslední slovo město, zkusíme vyhledat firmu V městě
+        const possibleCity = parts[parts.length - 1];
+        const possibleBusiness = parts.slice(0, -1).join(' ');
+        
+        // Zkusíme "firma IN město" (pro lepší hledání firem v konkrétních městech)
+        if (possibleBusiness.length > 0 && possibleCity.length > 2) {
+          await appendResults(`${possibleBusiness} in ${possibleCity}`);
+          
+          // Také zkusíme vyhledat firmu samostatně (v případě, že firma není v OSM spojena s městem)
+          await appendResults(possibleBusiness);
+        }
+      } else {
+        // Jednoslovný dotaz - pouze přímé vyhledávání
+        await appendResults(query);
       }
+      
+      // Funkce pro provedení dotazu a přidání výsledků do hlavního pole
+      async function appendResults(searchQuery) {
+        // Parametry pro lepší vyhledávání firem a míst
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&countrycodes=cz&q=${encodeURIComponent(searchQuery)}`;
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          // Přidáme výsledky, jen pokud nejsou duplicitní
+          data.forEach(item => {
+            // Kontrola, zda výsledek už nemáme
+            const isDuplicate = results.some(existingItem => 
+              existingItem.place_id === item.place_id
+            );
+            
+            if (!isDuplicate) {
+              results.push(item);
+            }
+          });
+        } catch (err) {
+          console.error('Chyba při načítání návrhů:', err);
+        }
+      }
+      
+      // Provedeme ještě speciální dotaz zaměřený přímo na firmy
+      try {
+        const businessUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=4&countrycodes=cz&featuretype=amenity&featuretype=shop&q=${encodeURIComponent(query)}`;
+        const response = await fetch(businessUrl);
+        const businessData = await response.json();
+        
+        // Přidáme výsledky firem, pokud nejsou duplicitní
+        businessData.forEach(item => {
+          const isDuplicate = results.some(existingItem => 
+            existingItem.place_id === item.place_id
+          );
+          
+          if (!isDuplicate) {
+            results.push(item);
+          }
+        });
+      } catch (err) {
+        console.error('Chyba při vyhledávání firem:', err);
+      }
+      
+      return results;
     }
 
     // Vylepšená funkce pro formátování adres včetně firem
@@ -306,21 +367,30 @@
         parts.push(item.address.postcode);
       }
       
-      // Lépe detekujeme, zda jde o firmu/POI a zobrazíme název
+      // Detekce firmy/POI - vylepšená
       let isBusinessOrPOI = false;
       let businessName = '';
       
-      // Kontrola všech možných zdrojů názvu firmy/POI
-      if (item.name) {
+      // Pokud máme přímo název
+      if (item.namedetails && item.namedetails.name) {
+        businessName = item.namedetails.name;
+        isBusinessOrPOI = true;
+      } else if (item.name) {
         businessName = item.name;
         isBusinessOrPOI = true;
-      } else if (item.type === 'amenity' || item.type === 'shop' || item.type === 'office') {
-        businessName = item.display_name.split(',')[0];
+      } 
+      // Pokud je to typu POI
+      else if (item.type === 'amenity' || item.type === 'shop' || item.type === 'office') {
+        businessName = item.display_name.split(',')[0].trim();
         isBusinessOrPOI = true;
-      } else if (item.class === 'amenity' || item.class === 'shop' || item.class === 'office') {
-        businessName = item.display_name.split(',')[0];
+      } 
+      // Kontrola kategorie
+      else if (item.class === 'amenity' || item.class === 'shop' || item.class === 'office') {
+        businessName = item.display_name.split(',')[0].trim();
         isBusinessOrPOI = true;
-      } else if (item.address && (item.address.amenity || item.address.shop || item.address.office)) {
+      } 
+      // Kontrola adresy pro firmy
+      else if (item.address && (item.address.amenity || item.address.shop || item.address.office)) {
         businessName = item.address.amenity || item.address.shop || item.address.office;
         isBusinessOrPOI = true;
       }
@@ -337,20 +407,24 @@
       return formattedAddress;
     }
 
-    // Upravená funkce pro zobrazení našeptávače - nyní jednodušší a rychlejší
+    // Upravená funkce pro zobrazení našeptávače s podporou vyhledávání firem
     async function showSuggestions(inputElem, suggestionElem) {
       const query = inputElem.value.trim();
-      if (!query) {
+      if (!query || query.length < 2) {
         suggestionElem.innerHTML = '';
         return;
       }
       
-      // Získáme data z Nominatim API
+      // Přidáme indikátor načítání
+      suggestionElem.innerHTML = '<li style="text-align:center;font-style:italic;">Vyhledávám...</li>';
+      
+      // Získáme rozšířená data z našeho vyhledávání
       const suggestions = await fetchSuggestions(query);
       suggestionElem.innerHTML = '';
       
       if (suggestions.length === 0) {
-        return; // Žádné výsledky
+        suggestionElem.innerHTML = '<li style="text-align:center;font-style:italic;">Žádné výsledky nenalezeny</li>';
+        return;
       }
       
       suggestions.forEach(item => {
