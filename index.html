@@ -62,27 +62,29 @@
           Časový harmonogram
           <div class="actions">
             <button id="print-schedule" title="Vytisknout harmonogram">
-              <i class="fas fa-print"></i> Tisk
+              <i class="fas fa-print"></i> <span>Tisk</span>
             </button>
             <button id="copy-schedule" title="Kopírovat do schránky">
-              <i class="fas fa-copy"></i> Kopírovat
+              <i class="fas fa-copy"></i> <span>Kopírovat</span>
             </button>
             <button id="export-schedule-pdf" title="Export do PDF">
-              <i class="fas fa-file-pdf"></i> PDF
+              <i class="fas fa-file-pdf"></i> <span>PDF</span>
             </button>
           </div>
         </h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Bod</th>
-              <th>Čas</th>
-              <th>Úsek</th>
-              <th>Celkem</th>
-            </tr>
-          </thead>
-          <tbody id="schedule-body"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Bod</th>
+                <th>Čas</th>
+                <th>Úsek</th>
+                <th>Celkem</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
