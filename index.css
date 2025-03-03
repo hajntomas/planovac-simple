@@ -423,3 +423,135 @@ button#planRoute:hover {
     display: none;
   }
 }
+
+/* Úpravy pro lepší responzivitu harmonogramu */
+
+/* Responzivní zobrazení tabulky */
+#schedule table {
+  width: 100%;
+  table-layout: fixed;  /* Důležité pro kontrolu šířky sloupců */
+  border-collapse: collapse;
+  margin: 0;
+}
+
+/* Nastavení šířek sloupců */
+#schedule th:nth-child(1),
+#schedule td:nth-child(1) {
+  width: 40%;  /* První sloupec s názvem bodu */
+  word-wrap: break-word;  /* Umožňuje zalomení dlouhého textu */
+}
+
+#schedule th:nth-child(2),
+#schedule td:nth-child(2) {
+  width: 15%;  /* Sloupec s časem */
+  min-width: 60px;
+}
+
+#schedule th:nth-child(3),
+#schedule td:nth-child(3) {
+  width: 20%;  /* Sloupec s úsekem */
+  min-width: 70px;
+}
+
+#schedule th:nth-child(4),
+#schedule td:nth-child(4) {
+  width: 25%;  /* Sloupec s celkovou vzdáleností */
+  min-width: 70px;
+}
+
+/* Úprava textu v buňkách */
+#schedule td {
+  padding: 0.75rem 0.5rem;  /* Menší padding na stranách */
+  font-size: 0.9rem;  /* Menší text pro úsporu místa */
+  overflow: hidden;
+  text-overflow: ellipsis;  /* Tři tečky na konci pokud text přeteče */
+}
+
+/* Zmenšení tlačítek v záhlaví na menších obrazovkách */
+@media (max-width: 600px) {
+  #schedule h2 {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  #schedule h2 .actions {
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  #schedule h2 button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  #schedule h2 button i {
+    margin-right: 0.2rem;
+  }
+  
+  /* Zmenšení textu v buňkách na velmi úzkých obrazovkách */
+  #schedule td, #schedule th {
+    font-size: 0.8rem;
+  }
+}
+
+/* Úprava pro velmi malé obrazovky */
+@media (max-width: 400px) {
+  #schedule th, #schedule td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+  }
+  
+  /* Skryjeme některé názvy na tlačítkách a ponecháme jen ikony */
+  #schedule h2 button span {
+    display: none;
+  }
+  
+  #schedule h2 button i {
+    margin-right: 0;
+  }
+}
+
+/* Oprava zobrazení tlačítek exportu */
+.export-buttons {
+  margin-top: 1.5rem;
+  display: none;
+  gap: 0.75rem;
+  flex-wrap: wrap;  /* Povolí zalamování tlačítek */
+}
+
+.export-buttons button {
+  flex: 1;
+  min-width: 150px;  /* Minimální šířka tlačítka */
+  margin-bottom: 0.5rem;
+}
+
+/* Zalamování dlouhých textů v buňkách harmonogramu */
+#schedule td:first-child {
+  white-space: normal;  /* Povolí zalamování dlouhých textů */
+  word-break: break-word;  /* Zalomí dlouhá slova pokud je to nutné */
+}
+
+/* Responzivní zobrazení pro mobilní zařízení */
+@media (max-width: 768px) {
+  .app-container {
+    grid-template-columns: 1fr;  /* Jeden sloupec na mobilních zařízeních */
+  }
+  
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+  
+  #map {
+    min-height: 400px;  /* Menší výška mapy na mobilních zařízeních */
+  }
+}
+
+/* Wrapper pro responzivní tabulku */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
