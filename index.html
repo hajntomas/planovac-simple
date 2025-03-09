@@ -76,37 +76,37 @@
       </div>
     </div>
 
-    <!-- Časový harmonogram - posunuto dolů, aby bylo pod mapou -->
-    <div id="schedule" class="schedule-container">
-      <div class="schedule-header">
-        <h2>Časový harmonogram</h2>
-        <div class="actions">
-          <button id="print-schedule" title="Vytisknout harmonogram">
-            <i class="fas fa-print"></i> <span class="btn-text">Tisk</span>
-          </button>
-          <button id="copy-schedule" title="Kopírovat do schránky">
-            <i class="fas fa-copy"></i> <span class="btn-text">Kopírovat</span>
-          </button>
-          <button id="export-schedule-pdf" title="Export do PDF">
-            <i class="fas fa-file-pdf"></i> <span class="btn-text">PDF</span>
-          </button>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Bod</th>
-              <th>Čas</th>
-              <th>Úsek</th>
-              <th>Celkem</th>
-            </tr>
-          </thead>
-          <tbody id="schedule-body"></tbody>
-        </table>
-      </div>
+   <!-- Časový harmonogram - optimalizovaný design -->
+<div id="schedule" class="schedule-container">
+  <div class="schedule-header">
+    <h2>Časový harmonogram</h2>
+    <div class="actions">
+      <button id="print-schedule" title="Vytisknout harmonogram">
+        <i class="fas fa-print"></i> <span class="btn-text">Tisk</span>
+      </button>
+      <button id="copy-schedule" title="Kopírovat do schránky">
+        <i class="fas fa-copy"></i> <span class="btn-text">Kopírovat</span>
+      </button>
+      <button id="export-schedule-pdf" title="Export do PDF">
+        <i class="fas fa-file-pdf"></i> <span class="btn-text">PDF</span>
+      </button>
     </div>
   </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Místo</th>
+          <th>Příjezd</th>
+          <th>Odjezd</th>
+          <th>Úsek</th>
+          <th>Vzdálenost</th>
+        </tr>
+      </thead>
+      <tbody id="schedule-body"></tbody>
+    </table>
+  </div>
+</div>
 
   <!-- Overlay pro mobilní verzi při otevření formuláře -->
   <div id="overlay" class="overlay"></div>
