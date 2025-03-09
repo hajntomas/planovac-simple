@@ -1,125 +1,714 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plánovač cest autem – Fixace času zastávek</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <!-- Hlavní navigace -->
-  <nav class="main-nav">
-    <div class="container">
-      <h1>Plánovač cest autem</h1>
-      <button id="toggleFormBtn" class="toggle-btn">
-        <i class="fas fa-route"></i> <span class="btn-text">Plánovat cestu</span>
-      </button>
-    </div>
-  </nav>
+/* Moderní barevná paleta a proměnné */
+:root {
+  --primary-color: #2c7be5;
+  --primary-light: #eaf2fd;
+  --primary-dark: #1a68d1;
+  --secondary-color: #6c757d;
+  --success-color: #00b074;
+  --danger-color: #e63757;
+  --warning-color: #f6c343;
+  --dark-color: #12263f;
+  --light-color: #f9fbfd;
+  --border-color: #e3ebf6;
+  --text-color: #283e59;
+  --text-muted: #95aac9;
+  --shadow-sm: 0 .125rem .25rem rgba(18,38,63,.075);
+  --shadow: 0 .5rem 1rem rgba(18,38,63,.15);
+  --shadow-lg: 0 1rem 2rem rgba(18,38,63,.175);
+  --radius: 0.375rem;
+  --transition: all .2s ease;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   
-  <div class="app-container">
-    <!-- Mapa, která je viditelná jako první -->
-    <div class="map-container">
-      <div id="map"></div>
-    </div>
+  /* Responzivní breakpointy */
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+}
 
-    <!-- Formulář plánovače, který je skrytý na malých obrazovkách -->
-    <div class="sidebar" id="planForm">
-      <div class="form-header">
-        <h2>Plánování cesty</h2>
-        <button class="close-form" id="closeFormBtn"><i class="fas fa-times"></i></button>
-      </div>
+/* Základní reset a styly */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-      <!-- Start -->
-      <div class="form-group">
-        <label for="start">Start:</label>
-        <div class="input-wrapper">
-          <input type="text" id="start" placeholder="např. Praha" autocomplete="off" spellcheck="false" />
-          <ul id="start-suggestions" class="suggestions"></ul>
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="departure">Čas odjezdu:</label>
-        <input type="time" id="departure" />
-      </div>
+html {
+  font-size: 16px;
+}
 
-      <!-- Zastávky -->
-      <div class="form-group">
-        <label>Zastávky:</label>
-        <div id="stops-container"></div>
-        <button id="add-stop" type="button">
-          <i class="fas fa-plus"></i> Přidat zastávku
-        </button>
-      </div>
+body {
+  font-family: var(--font-sans);
+  color: var(--text-color);
+  background-color: #f5f8fb;
+  line-height: 1.6;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
 
-      <!-- Cíl -->
-      <div class="form-group">
-        <label for="end">Cíl:</label>
-        <div class="input-wrapper">
-          <input type="text" id="end" placeholder="např. Ostrava" autocomplete="off" spellcheck="false" />
-          <ul id="end-suggestions" class="suggestions"></ul>
-        </div>
-      </div>
+.container {
+  width: 100%;
+  padding-right: 1rem;
+  padding-left: 1rem;
+  margin-right: auto;
+  margin-left: auto;
+}
 
-      <!-- Naplánovat trasu -->
-      <button id="planRoute" class="primary-btn">
-        <i class="fas fa-route"></i> Naplánovat trasu
-      </button>
+/* Hlavní navigace */
+.main-nav {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.75rem 0;
+  box-shadow: var(--shadow);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
 
-      <!-- Export tlačítka -->
-      <div class="export-buttons" id="export-buttons">
-        <button id="export-google">
-          <i class="fab fa-google"></i> Export do Google Maps
-        </button>
-      </div>
-    </div>
+.main-nav .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-    <!-- Časový harmonogram - posunuto dolů, aby bylo pod mapou -->
-    <div id="schedule" class="schedule-container">
-      <div class="schedule-header">
-        <h2>Časový harmonogram</h2>
-        <div class="actions">
-          <button id="print-schedule" title="Vytisknout harmonogram">
-            <i class="fas fa-print"></i> <span class="btn-text">Tisk</span>
-          </button>
-          <button id="copy-schedule" title="Kopírovat do schránky">
-            <i class="fas fa-copy"></i> <span class="btn-text">Kopírovat</span>
-          </button>
-          <button id="export-schedule-pdf" title="Export do PDF">
-            <i class="fas fa-file-pdf"></i> <span class="btn-text">PDF</span>
-          </button>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Bod</th>
-              <th>Čas</th>
-              <th>Úsek</th>
-              <th>Celkem</th>
-            </tr>
-          </thead>
-          <tbody id="schedule-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+.main-nav h1 {
+  font-size: 1.25rem;
+  margin: 0;
+  font-weight: 600;
+}
 
-  <!-- Overlay pro mobilní verzi při otevření formuláře -->
-  <div id="overlay" class="overlay"></div>
+.toggle-btn {
+  background-color: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 
-  <!-- Plovoucí tlačítko pro rychlý přístup k plánování -->
-  <button id="floatingPlanBtn" class="floating-btn">
-    <i class="fas fa-map-marker-alt"></i>
-  </button>
+.toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
 
-  <!-- Skrytý textarea pro kopírování do schránky -->
-  <textarea id="copy-content" style="position: absolute; left: -9999px;"></textarea>
+/* Hlavní kontejner aplikace */
+.app-container {
+  padding-top: 3.5rem; /* Prostor pro navigaci */
+  display: flex;
+  flex-direction: column;
+}
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="script.js"></script>
-</body>
-</html>
+/* Mapa */
+.map-container {
+  height: calc(100vh - 3.5rem);
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+/* Boční panel / Formulář - na mobilní verzi je skrytý a vysune se */
+.sidebar {
+  position: fixed;
+  top: 3.5rem;
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 3.5rem);
+  background-color: white;
+  box-shadow: var(--shadow);
+  z-index: 1100;
+  padding: 1rem;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.sidebar.active {
+  transform: translateX(0);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.form-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--dark-color);
+  margin: 0;
+}
+
+.close-form {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.close-form:hover {
+  color: var(--danger-color);
+}
+
+/* Overlay pro mobilní verzi - ztmaví pozadí */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  display: none;
+}
+
+.overlay.active {
+  display: block;
+}
+
+/* Plovoucí tlačítko pro rychlý přístup k plánování */
+.floating-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: var(--shadow);
+  border: none;
+  cursor: pointer;
+  z-index: 900;
+  transition: var(--transition);
+}
+
+.floating-btn:hover {
+  background-color: var(--primary-dark);
+  transform: scale(1.05);
+}
+
+/* Formulářové skupiny */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--dark-color);
+  font-size: 0.9375rem;
+}
+
+/* Vstupy */
+input[type="text"],
+input[type="time"],
+input[type="number"] {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  transition: var(--transition);
+  appearance: none;
+}
+
+input[type="text"]:focus,
+input[type="time"]:focus,
+input[type="number"]:focus {
+  border-color: var(--primary-color);
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(44, 123, 229, 0.25);
+}
+
+/* Obal pro vstupy s našeptávačem */
+.input-wrapper, .stop-input-wrapper {
+  position: relative;
+  margin-bottom: 0.5rem;
+  z-index: 10;
+}
+
+/* Našeptávač */
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  list-style: none;
+  box-shadow: var(--shadow);
+  display: none;
+}
+
+.suggestions.active {
+  display: block;
+}
+
+.suggestions li {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.suggestions li:hover {
+  background-color: var(--primary-light);
+}
+
+.suggestions li:last-child {
+  border-bottom: none;
+}
+
+/* Zastávky - karta */
+.stop-field {
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  position: relative;
+}
+
+.stop-field:hover {
+  box-shadow: var(--shadow);
+}
+
+/* Fixace času */
+.fix-row {
+  display: flex;
+  align-items: center;
+  margin: 0.75rem 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.fix-row label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.fix-row input[type="checkbox"] {
+  margin-right: 0.5rem;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.fix-row input.fixed-time {
+  max-width: 100%;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+/* Tlačítka */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  background-color: var(--primary-color);
+  border: 1px solid transparent;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  cursor: pointer;
+  gap: 0.5rem;
+}
+
+button:hover {
+  background-color: var(--primary-dark);
+}
+
+button:focus {
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(44, 123, 229, 0.25);
+}
+
+.primary-btn {
+  background-color: var(--success-color);
+  width: 100%;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.primary-btn:hover {
+  background-color: #009964;
+}
+
+button.remove-stop {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: var(--danger-color);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+button.remove-stop:hover {
+  background-color: #d92b48;
+}
+
+button#add-stop {
+  background-color: var(--secondary-color);
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+button#add-stop:hover {
+  background-color: #5a6268;
+}
+
+.export-buttons {
+  margin-top: 1.5rem;
+  display: none;
+  width: 100%;
+}
+
+.export-buttons button {
+  width: 100%;
+  background-color: var(--secondary-color);
+}
+
+.export-buttons button:hover {
+  background-color: #5a6268;
+}
+
+/* Časový harmonogram */
+.schedule-container {
+  display: none;
+  background-color: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin: 1rem;
+  overflow: hidden;
+}
+
+.schedule-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.schedule-header h2 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.schedule-header .actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.schedule-header button {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-size: 0.875rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  flex: 1;
+}
+
+.schedule-header button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Tabulka harmonogramu */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.5rem;
+}
+
+.schedule-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.schedule-container th {
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.625rem 0.5rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.schedule-container td {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  transition: var(--transition);
+}
+
+.schedule-container tr:hover td {
+  background-color: rgba(44, 123, 229, 0.05);
+}
+
+.schedule-container tr:last-child td {
+  border-bottom: none;
+}
+
+/* Odlišení typů řádků v harmonogramu */
+.schedule-container tr.departure td {
+  border-left: 3px solid var(--success-color);
+}
+
+.schedule-container tr.arrival td {
+  border-left: 3px solid var(--primary-color);
+}
+
+.schedule-container tr.final-arrival td {
+  border-left: 3px solid var(--danger-color);
+  font-weight: 600;
+}
+
+.schedule-container tr.fixed-time td {
+  background-color: rgba(246, 195, 67, 0.1);
+}
+
+.schedule-container tr.fixed-time td:first-child {
+  border-left: 3px solid var(--warning-color);
+}
+
+.schedule-container td:first-child {
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-container td:nth-child(2) {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.schedule-container td:nth-child(3),
+.schedule-container td:nth-child(4) {
+  text-align: right;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* Skrytí textu na tlačítkách na velmi malých obrazovkách */
+@media (max-width: 380px) {
+  .btn-text {
+    display: none;
+  }
+  
+  .main-nav h1 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Tablet a desktop */
+@media (min-width: 768px) {
+  .container {
+    max-width: 720px;
+  }
+  
+  .main-nav h1 {
+    font-size: 1.5rem;
+  }
+  
+  .app-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .map-container {
+    width: 100%;
+    height: 50vh;
+  }
+  
+  .schedule-container {
+    margin: 1rem;
+    width: calc(100% - 2rem);
+  }
+  
+  .schedule-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .schedule-header .actions {
+    width: auto;
+  }
+  
+  /* Vylepšení pro tablety */
+  .sidebar {
+    width: 350px;
+    transform: translateX(-350px);
+  }
+}
+
+/* Desktop */
+@media (min-width: 992px) {
+  .container {
+    max-width: 960px;
+  }
+  
+  .app-container {
+    padding: 1rem;
+    padding-top: 4.5rem;
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 1rem;
+    height: 100vh;
+  }
+  
+  .map-container {
+    width: 100%;
+    height: 100%;
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+  }
+  
+  .sidebar {
+    position: static;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    grid-column: 1;
+    grid-row: 1;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+  }
+  
+  .schedule-container {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0;
+  }
+  
+  .close-form,
+  .floating-btn {
+    display: none;
+  }
+  
+  .form-header {
+    justify-content: center;
+  }
+  
+  .form-header h2 {
+    text-align: center;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1140px;
+  }
+  
+  .app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+/* Tiskový styl */
+@media print {
+  .main-nav,
+  .sidebar,
+  .map-container,
+  .floating-btn,
+  .overlay {
+    display: none !important;
+  }
+  
+  .app-container {
+    padding: 0;
+    display: block;
+  }
+  
+  .schedule-container {
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+  }
+  
+  .schedule-header .actions {
+    display: none;
+  }
+  
+  .schedule-container th,
+  .schedule-container td {
+    padding: 10px;
+    font-size: 12pt;
+  }
+}
