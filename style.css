@@ -771,3 +771,117 @@ button#add-stop:hover {
     font-size: 12pt;
   }
 }
+
+/* Přidejte tyto styly do vašeho souboru style.css */
+
+/* Styly pro kompaktní harmonogram */
+.schedule-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.schedule-container th {
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.625rem 0.5rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.schedule-container td {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  transition: var(--transition);
+}
+
+.schedule-container tr:hover td {
+  background-color: rgba(44, 123, 229, 0.05);
+}
+
+.schedule-container tr:last-child td {
+  border-bottom: none;
+}
+
+/* Styly pro různé typy řádků */
+.schedule-container tr.start-point td {
+  border-left: 3px solid var(--success-color);
+  background-color: rgba(0, 176, 116, 0.05);
+}
+
+.schedule-container tr.stop-point td {
+  border-left: 3px solid var(--primary-color);
+}
+
+.schedule-container tr.end-point td {
+  border-left: 3px solid var(--danger-color);
+  background-color: rgba(230, 55, 87, 0.05);
+}
+
+/* Styly pro fixovaný čas */
+.schedule-container tr.fixed-time td {
+  background-color: rgba(246, 195, 67, 0.1);
+}
+
+.schedule-container tr.fixed-time td:first-child {
+  border-left: 3px solid var(--warning-color);
+}
+
+/* Styl pro buňky s časy */
+.schedule-container td.time-cell {
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Styl pro buňky s měřením */
+.schedule-container td.measure-cell {
+  text-align: right;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* Styl pro místo/bod */
+.schedule-container td.place-cell {
+  max-width: 30vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+/* Responzivita pro mobilní zařízení */
+@media (max-width: 768px) {
+  .schedule-container table {
+    font-size: 0.8rem;
+  }
+  
+  .schedule-container th {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .schedule-container td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .schedule-container td.place-cell {
+    max-width: 25vw;
+  }
+}
+
+/* Extrémně malé obrazovky - ještě více kompaktní */
+@media (max-width: 480px) {
+  .schedule-container th:nth-child(4), /* Úsek */
+  .schedule-container td:nth-child(4) {
+    display: none;
+  }
+  
+  .schedule-container td.place-cell {
+    max-width: 40vw;
+  }
+}
