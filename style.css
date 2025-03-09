@@ -35,6 +35,8 @@
 
 html {
   font-size: 16px;
+  height: 100%;
+  overflow-x: hidden; /* Zabránění horizontálního scrollování */
 }
 
 body {
@@ -45,6 +47,14 @@ body {
   overflow-x: hidden;
   position: relative;
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS fix */
+}
+
+/* iOS Fix pro 100vh problém */
+@supports (-webkit-touch-callout: none) {
+  body, .map-container, .sidebar {
+    height: -webkit-fill-available;
+  }
 }
 
 .container {
@@ -66,6 +76,8 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
+  height: 3.5rem; /* Pevná výška pro výpočty */
+  -webkit-transform: translateZ(0); /* iOS fix */
 }
 
 .main-nav .container {
@@ -92,6 +104,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  -webkit-tap-highlight-color: transparent; /* Odstranění zvýraznění tlačítka na mobilních zařízeních */
 }
 
 .toggle-btn:hover {
@@ -103,6 +116,8 @@ body {
   padding-top: 3.5rem; /* Prostor pro navigaci */
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 /* Mapa */
@@ -112,11 +127,13 @@ body {
   width: 100%;
   position: relative;
   z-index: 1;
+  -webkit-transform: translateZ(0); /* iOS fix pro hardware acceleration */
 }
 
 #map {
   height: 100%;
   width: 100%;
+  touch-action: manipulation; /* Vylepšení dotyku na mobilech */
 }
 
 /* Boční panel / Formulář - na mobilní verzi je skrytý a vysune se */
@@ -134,6 +151,8 @@ body {
   overflow-y: auto;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
+  -webkit-overflow-scrolling: touch; /* Vylepšení scrollování na iOS */
+  overscroll-behavior: contain; /* Zabraňuje propagaci scrollování */
 }
 
 .sidebar.active {
@@ -167,6 +186,7 @@ body {
   align-items: center;
   justify-content: center;
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent; /* Odstranění zvýraznění tlačítka na mobilních zařízeních */
 }
 
 .close-form:hover {
@@ -183,6 +203,8 @@ body {
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1050;
   display: none;
+  -webkit-backdrop-filter: blur(2px); /* Efekt rozmazání na iOS */
+  backdrop-filter: blur(2px);
 }
 
 .overlay.active {
@@ -208,6 +230,8 @@ body {
   cursor: pointer;
   z-index: 900;
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent; /* Odstranění zvýraznění tlačítka na mobilních zařízeních */
+  animation: pulse 2s infinite; /* Pulsující efekt pro lepší viditelnost */
 }
 
 /* Na malých obrazovkách zobrazíme plovoucí tlačítko */
@@ -252,6 +276,19 @@ input[type="number"] {
   border-radius: var(--radius);
   transition: var(--transition);
   appearance: none;
+  -webkit-appearance: none; /* Safari Fix */
+  min-height: 44px; /* Minimální výška pro iOS */
+}
+
+/* Prevent iOS automatic zoom */
+@media screen and (-webkit-min-device-pixel-ratio:0) { 
+  select,
+  textarea,
+  input[type="text"],
+  input[type="time"],
+  input[type="number"] {
+    font-size: 16px;
+  }
 }
 
 input[type="text"]:focus,
@@ -285,6 +322,7 @@ input[type="number"]:focus {
   list-style: none;
   box-shadow: var(--shadow);
   display: none;
+  -webkit-overflow-scrolling: touch; /* Pro plynulé scrollování na iOS */
 }
 
 .suggestions.active {
@@ -338,13 +376,14 @@ input[type="number"]:focus {
   align-items: center;
   margin-bottom: 0;
   cursor: pointer;
+  min-height: 44px; /* Minimální výška pro mobilní dotyky */
 }
 
 .fix-row input[type="checkbox"] {
   margin-right: 0.5rem;
   cursor: pointer;
-  width: 16px;
-  height: 16px;
+  width: 22px; /* Zvětšeno pro mobilní zařízení */
+  height: 22px; /* Zvětšeno pro mobilní zařízení */
 }
 
 .fix-row input.fixed-time {
@@ -372,6 +411,8 @@ button {
   transition: var(--transition);
   cursor: pointer;
   gap: 0.5rem;
+  min-height: 44px; /* Minimální výška pro mobilní dotyky */
+  -webkit-tap-highlight-color: transparent; /* Odstranění zvýraznění tlačítka */
 }
 
 button:hover {
@@ -409,6 +450,7 @@ button.remove-stop {
   align-items: center;
   justify-content: center;
   font-size: 1rem;
+  min-height: auto; /* Přepsání minimální výšky pro toto tlačítko */
 }
 
 button.remove-stop:hover {
@@ -448,6 +490,7 @@ button#add-stop:hover {
   box-shadow: var(--shadow);
   margin: 1rem;
   overflow: hidden;
+  -webkit-transform: translateZ(0); /* iOS fix */
 }
 
 .schedule-header {
@@ -477,6 +520,7 @@ button#add-stop:hover {
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius);
   flex: 1;
+  min-height: 38px; /* Menší výška pro tato tlačítka */
 }
 
 .schedule-header button:hover {
@@ -505,11 +549,6 @@ button#add-stop:hover {
     box-shadow: 0 0 0 0 rgba(44, 123, 229, 0);
     transform: scale(1);
   }
-}
-
-/* Aplikace pulsujícího efektu na plovoucí tlačítko */
-.floating-btn {
-  animation: pulse 2s infinite;
 }
 
 /* Styly pro kompaktní harmonogram */
@@ -593,8 +632,55 @@ button#add-stop:hover {
   white-space: normal;
 }
 
-/* Skrytí textu na tlačítkách na velmi malých obrazovkách */
-@media (max-width: 380px) {
+/* Notifikace */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--success-color);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 1500;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.notification.hide {
+  opacity: 0;
+}
+
+/* Styl pro vlastní markery */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.start-marker i {
+  color: var(--success-color);
+  text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  font-size: 1.5rem;
+}
+
+.end-marker i {
+  color: var(--danger-color);
+  text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  font-size: 1.75rem;
+}
+
+.stop-marker i {
+  color: var(--primary-color);
+  text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  font-size: 1.25rem;
+}
+
+/* Responzivní styly */
+/* Mobilní zařízení (extra small a small) */
+@media (max-width: 767.98px) {
   .btn-text {
     display: none;
   }
@@ -602,35 +688,12 @@ button#add-stop:hover {
   .main-nav h1 {
     font-size: 1.1rem;
   }
-}
-
-/* Vylepšená responzivita pro malé obrazovky */
-@media (max-width: 576px) {
+  
   .map-container {
-    height: calc(100vh - 3.5rem - 60px); /* Zmenšení výšky mapy, aby byla vidět část harmonogramu */
+    height: calc(100vh - 3.5rem - 60px);
+    height: calc(var(--vh, 1vh) * 100 - 3.5rem - 60px);
   }
   
-  .schedule-container {
-    margin-top: 0;
-  }
-  
-  /* Větší plovoucí tlačítko pro lepší dostupnost na mobilech */
-  .floating-btn {
-    width: 4rem;
-    height: 4rem;
-    font-size: 1.5rem;
-    bottom: 1rem;
-    right: 1rem;
-  }
-  
-  /* Upravení viditelnosti obsahu v tabulce harmonogramu */
-  .schedule-container td:first-child {
-    max-width: 30vw;
-  }
-}
-
-/* Responzivita pro mobilní zařízení */
-@media (max-width: 768px) {
   .schedule-container table {
     font-size: 0.8rem;
   }
@@ -643,13 +706,47 @@ button#add-stop:hover {
     padding: 0.5rem 0.25rem;
   }
   
-  .schedule-container td.place-cell {
-    max-width: 25vw;
+  .suggestions li {
+    padding: 1rem 0.75rem;
+    font-size: 1rem;
+  }
+  
+  /* Lepší ovládání mapy na dotykových zařízeních */
+  .leaflet-touch .leaflet-bar a {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+  }
+  
+  /* Oprava pozice leaflet kontrol */
+  .leaflet-top, .leaflet-bottom {
+    z-index: 800; /* Nižší než sidebar a plovoucí tlačítko */
   }
 }
 
-/* Tablet a desktop */
-@media (min-width: 768px) {
+/* Extrémně malé obrazovky */
+@media (max-width: 480px) {
+  .schedule-container th:nth-child(4), /* Úsek */
+  .schedule-container td:nth-child(4) {
+    display: none;
+  }
+  
+  .schedule-container td.place-cell {
+    max-width: 40vw;
+  }
+  
+  /* Zjednodušení hlavičky harmonogramu */
+  .schedule-header {
+    padding: 0.5rem;
+  }
+  
+  .schedule-header h2 {
+    font-size: 1rem;
+  }
+}
+
+/* Tablet (medium) */
+@media (min-width: 768px) and (max-width: 991.98px) {
   .container {
     max-width: 720px;
   }
@@ -690,19 +787,7 @@ button#add-stop:hover {
   }
 }
 
-/* Extrémně malé obrazovky - ještě více kompaktní */
-@media (max-width: 480px) {
-  .schedule-container th:nth-child(4), /* Úsek */
-  .schedule-container td:nth-child(4) {
-    display: none;
-  }
-  
-  .schedule-container td.place-cell {
-    max-width: 40vw;
-  }
-}
-
-/* Desktop */
+/* Desktop (large) */
 @media (min-width: 992px) {
   .container {
     max-width: 960px;
