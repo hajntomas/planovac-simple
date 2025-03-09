@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
   window.addEventListener('resize', setMobileHeight);
   window.addEventListener('orientationchange', setMobileHeight);
   setMobileHeight();
+  
   // Elementi pro přepínání zobrazení formuláře/mapy
   const toggleFormBtn = document.getElementById('toggleFormBtn');
   const closeFormBtn = document.getElementById('closeFormBtn');
@@ -563,11 +564,151 @@ document.addEventListener('DOMContentLoaded', function() {
     generateSchedule(scheduleItems);
   }
   
-  generateSchedule
+  // Nová implementace pro generování kompaktního harmonogramu
+  function generateSchedule(scheduleItems) {
+    const scheduleBody = document.getElementById("schedule-body");
+    scheduleBody.innerHTML = "";
+    
+    // Zpracování položek harmonogramu
+    const organizedItems = organizeScheduleItems(scheduleItems);
+    
+    // Vygenerování řádků harmonogramu
+    organizedItems.forEach(item => {
+      const row = document.createElement('tr');
+      
+      // Nastavení třídy řádku podle typu bodu
+      if (item.type === 'start') {
+        row.className = "start-point";
+      } else if (item.type === 'stop') {
+        row.className = "stop-point";
+        
+        // Přidání třídy pro fixovaný čas, pokud existuje
+        if (item.fixed) {
+          row.className += " fixed-time";
+        }
+      } else if (item.type === 'end') {
+        row.className = "end-point";
+      }
+      
+      // Formátování časů
+      const arrivalTime = item.arrivalTime ? formatTime(item.arrivalTime) : "-";
+      const departureTime = item.departureTime ? formatTime(item.departureTime) : "-";
+      
+      // Zobrazení segmentu trasy
+      const segment = item.segment ? item.segment : "-";
+      
+      // Vytvoření buněk řádku
+      row.innerHTML = `
+        <td class="place-cell">${item.name}</td>
+        <td class="time-cell">${arrivalTime}</td>
+        <td class="time-cell">${departureTime}</td>
+        <td class="measure-cell">${item.arrivalTime && item.departureTime ? calculateDuration(item.arrivalTime, item.departureTime) : "-"}</td>
+        <td class="measure-cell">${item.cumulative}</td>
+      `;
+      
+      scheduleBody.appendChild(row);
+    });
     
     // Zobrazení harmonogramu a export tlačítek
     document.getElementById("schedule").style.display = "block";
     document.getElementById('export-buttons').style.display = 'flex';
+  }
+
+  // Funkce pro organizaci položek harmonogramu
+  function organizeScheduleItems(items) {
+    // Připravíme výsledné pole
+    const result = [];
+    
+    // Najdeme první položku (odjezd ze startu)
+    const startItem = items.find(item => item.label.includes("Odjezd ze Start"));
+    if (startItem) {
+      result.push({
+        type: 'start',
+        name: extractPlace(startItem.label, "Odjezd ze Start"),
+        departureTime: startItem.time,
+        arrivalTime: null,
+        segment: "",
+        cumulative: startItem.cumulative
+      });
+    }
+    
+    // Zpracování zastávek
+    let i = 0;
+    while (i < items.length) {
+      const item = items[i];
+      
+      // Příjezd do zastávky
+      if (item.label.includes("Příjezd do Zastávky")) {
+        const stopIndex = extractStopIndex(item.label);
+        const placeName = extractPlace(item.label, "Příjezd do Zastávky " + stopIndex);
+        
+        // Hledáme odpovídající odjezd
+        const departureItem = items.find(dep => 
+          dep.label.includes("Odjezd ze Zastávky " + stopIndex) && 
+          extractPlace(dep.label, "Odjezd ze Zastávky " + stopIndex) === placeName
+        );
+        
+        result.push({
+          type: 'stop',
+          name: placeName,
+          arrivalTime: item.time,
+          departureTime: departureItem ? departureItem.time : null,
+          segment: item.segment,
+          cumulative: item.cumulative,
+          fixed: item.fixed
+        });
+      }
+      
+      i++;
+    }
+    
+    // Najdeme poslední položku (příjezd do cíle)
+    const endItem = items.find(item => item.label.includes("Příjezd do Cíle"));
+    if (endItem) {
+      result.push({
+        type: 'end',
+        name: extractPlace(endItem.label, "Příjezd do Cíle"),
+        arrivalTime: endItem.time,
+        departureTime: null,
+        segment: endItem.segment,
+        cumulative: endItem.cumulative
+      });
+    }
+    
+    return result;
+  }
+
+  // Pomocná funkce pro extrakci místa z popisu
+  function extractPlace(label, prefix) {
+    // Odstraní prefix a závorky
+    return label.replace(prefix + " (", "").replace(")", "");
+  }
+
+  // Pomocná funkce pro extrakci čísla zastávky
+  function extractStopIndex(label) {
+    const match = label.match(/Zastávky (\d+)/);
+    return match ? match[1] : "";
+  }
+
+  // Formátování času
+  function formatTime(date) {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  // Výpočet trvání přestávky
+  function calculateDuration(arrivalTime, departureTime) {
+    const diff = departureTime.getTime() - arrivalTime.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 60) {
+      return `${minutes} min`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return `${hours}h ${remainingMinutes}m`;
+    }
   }
   
   // Export do Google Maps
@@ -588,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.print();
   }
 
-  // Funkce pro kopírování harmonogramu do schránky
+  // Aktualizovaná funkce pro kopírování harmonogramu do schránky
   function copyScheduleToClipboard() {
     const scheduleTable = document.querySelector('.schedule-container');
     const rows = scheduleTable.querySelectorAll('tbody tr');
@@ -596,13 +737,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     rows.forEach(row => {
       const columns = row.querySelectorAll('td');
-      textContent += `${columns[0].textContent} - ${columns[1].textContent}`;
+      const place = columns[0].textContent;
+      const arrival = columns[1].textContent;
+      const departure = columns[2].textContent;
+      const segment = columns[3].textContent;
+      const distance = columns[4].textContent;
       
-      if (columns[2].textContent.trim() !== '') {
-        textContent += ` (${columns[2].textContent})`;
+      // Určení typu řádku pro lepší formátování
+      if (row.classList.contains('start-point')) {
+        textContent += `START: ${place}\n`;
+        textContent += `Odjezd: ${departure}\n`;
+      } else if (row.classList.contains('end-point')) {
+        textContent += `CÍL: ${place}\n`;
+        textContent += `Příjezd: ${arrival}\n`;
+      } else {
+        textContent += `ZASTÁVKA: ${place}\n`;
+        textContent += `Příjezd: ${arrival} | Odjezd: ${departure} | Přestávka: ${segment}\n`;
       }
       
-      textContent += `\nCelková vzdálenost: ${columns[3].textContent}\n\n`;
+      textContent += `Vzdálenost: ${distance}\n\n`;
     });
     
     const copyContent = document.getElementById('copy-content');
