@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Plánovač cest autem – Fixace času zastávek</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
@@ -76,37 +76,38 @@
       </div>
     </div>
 
-   <!-- Časový harmonogram - optimalizovaný design -->
-<div id="schedule" class="schedule-container">
-  <div class="schedule-header">
-    <h2>Časový harmonogram</h2>
-    <div class="actions">
-      <button id="print-schedule" title="Vytisknout harmonogram">
-        <i class="fas fa-print"></i> <span class="btn-text">Tisk</span>
-      </button>
-      <button id="copy-schedule" title="Kopírovat do schránky">
-        <i class="fas fa-copy"></i> <span class="btn-text">Kopírovat</span>
-      </button>
-      <button id="export-schedule-pdf" title="Export do PDF">
-        <i class="fas fa-file-pdf"></i> <span class="btn-text">PDF</span>
-      </button>
+    <!-- Časový harmonogram - optimalizovaný design -->
+    <div id="schedule" class="schedule-container">
+      <div class="schedule-header">
+        <h2>Časový harmonogram</h2>
+        <div class="actions">
+          <button id="print-schedule" title="Vytisknout harmonogram">
+            <i class="fas fa-print"></i> <span class="btn-text">Tisk</span>
+          </button>
+          <button id="copy-schedule" title="Kopírovat do schránky">
+            <i class="fas fa-copy"></i> <span class="btn-text">Kopírovat</span>
+          </button>
+          <button id="export-schedule-pdf" title="Export do PDF">
+            <i class="fas fa-file-pdf"></i> <span class="btn-text">PDF</span>
+          </button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Místo</th>
+              <th>Příjezd</th>
+              <th>Odjezd</th>
+              <th>Úsek</th>
+              <th>Vzdálenost</th>
+            </tr>
+          </thead>
+          <tbody id="schedule-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
-  <div class="table-responsive">
-    <table>
-      <thead>
-        <tr>
-          <th>Místo</th>
-          <th>Příjezd</th>
-          <th>Odjezd</th>
-          <th>Úsek</th>
-          <th>Vzdálenost</th>
-        </tr>
-      </thead>
-      <tbody id="schedule-body"></tbody>
-    </table>
-  </div>
-</div>
 
   <!-- Overlay pro mobilní verzi při otevření formuláře -->
   <div id="overlay" class="overlay"></div>
@@ -116,49 +117,10 @@
     <i class="fas fa-map-marker-alt"></i>
   </button>
 
-// Aktualizovaná funkce pro kopírování harmonogramu do schránky
-function copyScheduleToClipboard() {
-  const scheduleTable = document.querySelector('.schedule-container');
-  const rows = scheduleTable.querySelectorAll('tbody tr');
-  let textContent = "ČASOVÝ HARMONOGRAM CESTY\n\n";
-  
-  rows.forEach(row => {
-    const columns = row.querySelectorAll('td');
-    const place = columns[0].textContent;
-    const arrival = columns[1].textContent;
-    const departure = columns[2].textContent;
-    const segment = columns[3].textContent;
-    const distance = columns[4].textContent;
-    
-    // Určení typu řádku pro lepší formátování
-    if (row.classList.contains('start-point')) {
-      textContent += `START: ${place}\n`;
-      textContent += `Odjezd: ${departure}\n`;
-    } else if (row.classList.contains('end-point')) {
-      textContent += `CÍL: ${place}\n`;
-      textContent += `Příjezd: ${arrival}\n`;
-    } else {
-      textContent += `ZASTÁVKA: ${place}\n`;
-      textContent += `Příjezd: ${arrival} | Odjezd: ${departure} | Přestávka: ${segment}\n`;
-    }
-    
-    textContent += `Vzdálenost: ${distance}\n\n`;
-  });
-  
-  const copyContent = document.getElementById('copy-content');
-  copyContent.value = textContent;
-  copyContent.select();
-  document.execCommand('copy');
-  
-  // Notifikace o zkopírování
-  const notification = document.createElement('div');
-  notification.className = 'notification';
-  notification.textContent = 'Harmonogram byl zkopírován do schránky!';
-  document.body.appendChild(notification);
-  
-  // Automaticky zmizí po 3 sekundách
-  setTimeout(() => {
-    notification.classList.add('hide');
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
+  <!-- Skrytý textarea pro kopírování do schránky -->
+  <textarea id="copy-content" style="position: absolute; left: -9999px;"></textarea>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
