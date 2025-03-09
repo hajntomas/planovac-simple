@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <td class="place-cell">${item.name}</td>
         <td class="time-cell">${arrivalTime}</td>
         <td class="time-cell">${departureTime}</td>
-        <td class="measure-cell">${item.arrivalTime && item.departureTime ? calculateDuration(item.arrivalTime, item.departureTime) : "-"}</td>
+        <td class="measure-cell">${item.segment}</td>
         <td class="measure-cell">${item.cumulative}</td>
       `;
       
