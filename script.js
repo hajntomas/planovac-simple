@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Pro lepší responzivitu na mobilech nastavíme výšku viewport
+  function setMobileHeight() {
+    // Nastavení výšky na viditelnou oblast prohlížeče
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  
+  // Volání funkce při načtení a při změně velikosti
+  window.addEventListener('resize', setMobileHeight);
+  window.addEventListener('orientationchange', setMobileHeight);
+  setMobileHeight();
   // Elementi pro přepínání zobrazení formuláře/mapy
   const toggleFormBtn = document.getElementById('toggleFormBtn');
   const closeFormBtn = document.getElementById('closeFormBtn');
@@ -20,11 +31,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Kontrola šířky okna a automatické zobrazení/skrytí sidebaru
   function checkWindowSize() {
-    // Na desktopu vždy zobrazit sidebar a skrýt overlay
     if (window.innerWidth >= 992) {
+      // Na desktopu: vždy zobrazit sidebar, skrýt overlay a plovoucí tlačítko
       sidebar.classList.remove('active');
       overlay.classList.remove('active');
       document.body.classList.remove('sidebar-open');
+      floatingPlanBtn.style.display = 'none';
+      toggleFormBtn.style.display = 'none';
+    } else {
+      // Na mobilních zařízeních: skrýt sidebar, zobrazit plovoucí tlačítko
+      sidebar.classList.remove('active');
+      overlay.classList.remove('active');
+      floatingPlanBtn.style.display = 'flex';
+      toggleFormBtn.style.display = 'flex';
     }
   }
 
