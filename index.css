@@ -26,278 +26,6 @@
   --breakpoint-xl: 1200px;
 }
 
-/* Responzivita pro mobilní zařízení */
-@media (max-width: 768px) {
-  .schedule-container table {
-    font-size: 0.8rem;
-  }
-  
-  .schedule-container th {
-    padding: 0.5rem 0.25rem;
-  }
-  
-  .schedule-container td {
-    padding: 0.5rem 0.25rem;
-  }
-  
-  .schedule-container td.place-cell {
-    max-width: 25vw;
-  }
-  
-  /* Lepší ovládání mapy na dotykových zařízeních */
-  .leaflet-touch .leaflet-bar a {
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-  }
-  
-  /* Oprava pozice leaflet kontrol */
-  .leaflet-top, .leaflet-bottom {
-    z-index: 800; /* Nižší než sidebar a plovoucí tlačítko */
-  }
-}
-
-/* Tablet a desktop */
-@media (min-width: 768px) {
-  .container {
-    max-width: 720px;
-  }
-  
-  .main-nav h1 {
-    font-size: 1.5rem;
-  }
-  
-  .app-container {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  
-  .map-container {
-    width: 100%;
-    height: 50vh;
-  }
-  
-  .schedule-container {
-    margin: 1rem;
-    width: calc(100% - 2rem);
-  }
-  
-  .schedule-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .schedule-header .actions {
-    width: auto;
-  }
-  
-  /* Vylepšení pro tablety */
-  .sidebar {
-    width: 350px;
-    transform: translateX(-350px);
-  }
-}
-
-/* Extrémně malé obrazovky - ještě více kompaktní */
-@media (max-width: 320px) {
-  .schedule-container th:nth-child(4), /* Úsek */
-  .schedule-container td:nth-child(4) {
-    display: none;
-  }
-  
-  .schedule-container td.place-cell {
-    max-width: 40vw;
-  }
-  
-  .main-nav h1 {
-    font-size: 1rem;
-  }
-  
-  /* Zjednodušení hlavičky harmonogramu */
-  .schedule-header {
-    padding: 0.5rem;
-  }
-  
-  .schedule-header h2 {
-    font-size: 1rem;
-  }
-  
-  /* Menší tlačítka */
-  .floating-btn {
-    width: 3.5rem;
-    height: 3.5rem;
-    font-size: 1.25rem;
-  }
-}
-
-/* Desktop */
-@media (min-width: 992px) {
-  .container {
-    max-width: 960px;
-  }
-  
-  .app-container {
-    padding: 1rem;
-    padding-top: 4.5rem;
-    display: grid;
-    grid-template-columns: 350px 1fr;
-    grid-template-rows: 1fr auto;
-    gap: 1rem;
-    height: 100vh;
-  }
-  
-  .map-container {
-    width: 100%;
-    height: 100%;
-    grid-column: 2;
-    grid-row: 1;
-    margin: 0;
-  }
-  
-  .sidebar {
-    position: static;
-    transform: none;
-    width: 100%;
-    height: 100%;
-    box-shadow: var(--shadow);
-    border-radius: var(--radius);
-    grid-column: 1;
-    grid-row: 1;
-    max-height: calc(100vh - 5.5rem);
-    overflow-y: auto;
-  }
-  
-  .schedule-container {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    margin: 0;
-  }
-  
-  .close-form {
-    display: none;
-  }
-  
-  /* Skryjeme toggle tlačítko v navigaci na desktopu */
-  .main-nav .toggle-btn {
-    display: none;
-  }
-  
-  .form-header {
-    justify-content: center;
-  }
-  
-  .form-header h2 {
-    text-align: center;
-  }
-}
-
-/* Large desktop */
-@media (min-width: 1200px) {
-  .container {
-    max-width: 1140px;
-  }
-  
-  .app-container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-}
-
-/* Tiskový styl */
-@media print {
-  .main-nav,
-  .sidebar,
-  .map-container,
-  .floating-btn,
-  .overlay {
-    display: none !important;
-  }
-  
-  .app-container {
-    padding: 0;
-    display: block;
-  }
-  
-  .schedule-container {
-    display: block !important;
-    width: 100%;
-    margin: 0;
-    box-shadow: none;
-    border: none;
-  }
-  
-  .schedule-header .actions {
-    display: none;
-  }
-  
-  .schedule-container th,
-  .schedule-container td {
-    padding: 10px;
-    font-size: 12pt;
-  }
-}
-
-/* Speciální opravy pro Safari */
-@supports (-webkit-touch-callout: none) {
-  /* Oprava 100vh v Safari na iOS */
-  .map-container, 
-  .sidebar {
-    height: -webkit-fill-available;
-  }
-  
-  /* Oprava scrollování v Safari */
-  .suggestions,
-  .sidebar {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Oprava pro notifikaci */
-.notification {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: var(--success-color);
-  color: white;
-  padding: 10px 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  z-index: 1500;
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-.notification.hide {
-  opacity: 0;
-}
-
-/* Styl pro vlastní markery */
-.custom-marker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.25rem;
-}
-
-.start-marker i {
-  color: var(--success-color);
-  text-shadow: 0 0 3px rgba(0,0,0,0.5);
-  font-size: 1.5rem;
-}
-
-.end-marker i {
-  color: var(--danger-color);
-  text-shadow: 0 0 3px rgba(0,0,0,0.5);
-  font-size: 1.75rem;
-}
-
-.stop-marker i {
-  color: var(--primary-color);
-  text-shadow: 0 0 3px rgba(0,0,0,0.5);
-  font-size: 1.25rem;
-}
-
 /* Základní reset a styly */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -503,6 +231,7 @@ body {
   z-index: 900;
   transition: var(--transition);
   -webkit-tap-highlight-color: transparent; /* Odstranění zvýraznění tlačítka na mobilních zařízeních */
+  animation: pulse 2s infinite; /* Pulsující efekt pro lepší viditelnost */
 }
 
 /* Na malých obrazovkách zobrazíme plovoucí tlačítko */
@@ -822,11 +551,6 @@ button#add-stop:hover {
   }
 }
 
-/* Aplikace pulsujícího efektu na plovoucí tlačítko */
-.floating-btn {
-  animation: pulse 2s infinite;
-}
-
 /* Styly pro kompaktní harmonogram */
 .schedule-container table {
   width: 100%;
@@ -908,8 +632,55 @@ button#add-stop:hover {
   white-space: normal;
 }
 
-/* Skrytí textu na tlačítkách na velmi malých obrazovkách */
-@media (max-width: 380px) {
+/* Notifikace */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--success-color);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 1500;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.notification.hide {
+  opacity: 0;
+}
+
+/* Styl pro vlastní markery */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.start-marker i {
+  color: var(--success-color);
+  text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  font-size: 1.5rem;
+}
+
+.end-marker i {
+  color: var(--danger-color);
+  text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  font-size: 1.75rem;
+}
+
+.stop-marker i {
+  color: var(--primary-color);
+  text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  font-size: 1.25rem;
+}
+
+/* Responzivní styly */
+/* Mobilní zařízení (extra small a small) */
+@media (max-width: 767.98px) {
   .btn-text {
     display: none;
   }
@@ -918,45 +689,207 @@ button#add-stop:hover {
     font-size: 1.1rem;
   }
   
-  /* Zvětšené dotyková plocha pro mobilní zařízení */
-  .schedule-header button {
-    padding: 0.5rem;
-  }
-}
-
-/* Vylepšená responzivita pro malé obrazovky */
-@media (max-width: 576px) {
   .map-container {
-    height: calc(100vh - 3.5rem - 60px); /* Zmenšení výšky mapy, aby byla vidět část harmonogramu */
+    height: calc(100vh - 3.5rem - 60px);
     height: calc(var(--vh, 1vh) * 100 - 3.5rem - 60px);
   }
   
-  .schedule-container {
-    margin-top: 0;
+  .schedule-container table {
+    font-size: 0.8rem;
   }
   
-  /* Větší plovoucí tlačítko pro lepší dostupnost na mobilech */
-  .floating-btn {
-    width: 4rem;
-    height: 4rem;
-    font-size: 1.5rem;
-    bottom: 1rem;
-    right: 1rem;
+  .schedule-container th {
+    padding: 0.5rem 0.25rem;
   }
   
-  /* Upravení viditelnosti obsahu v tabulce harmonogramu */
-  .schedule-container td.place-cell {
-    max-width: 30vw;
+  .schedule-container td {
+    padding: 0.5rem 0.25rem;
   }
   
-  /* Zlepšení dotyková plocha na malých obrazovkách */
   .suggestions li {
     padding: 1rem 0.75rem;
     font-size: 1rem;
   }
   
-  /* Zvětšení tlačítek */
-  button {
-    padding: 0.875rem 1rem;
+  /* Lepší ovládání mapy na dotykových zařízeních */
+  .leaflet-touch .leaflet-bar a {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+  }
+  
+  /* Oprava pozice leaflet kontrol */
+  .leaflet-top, .leaflet-bottom {
+    z-index: 800; /* Nižší než sidebar a plovoucí tlačítko */
+  }
+}
+
+/* Extrémně malé obrazovky */
+@media (max-width: 480px) {
+  .schedule-container th:nth-child(4), /* Úsek */
+  .schedule-container td:nth-child(4) {
+    display: none;
+  }
+  
+  .schedule-container td.place-cell {
+    max-width: 40vw;
+  }
+  
+  /* Zjednodušení hlavičky harmonogramu */
+  .schedule-header {
+    padding: 0.5rem;
+  }
+  
+  .schedule-header h2 {
+    font-size: 1rem;
+  }
+}
+
+/* Tablet (medium) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .container {
+    max-width: 720px;
+  }
+  
+  .main-nav h1 {
+    font-size: 1.5rem;
+  }
+  
+  .app-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .map-container {
+    width: 100%;
+    height: 50vh;
+  }
+  
+  .schedule-container {
+    margin: 1rem;
+    width: calc(100% - 2rem);
+  }
+  
+  .schedule-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .schedule-header .actions {
+    width: auto;
+  }
+  
+  /* Vylepšení pro tablety */
+  .sidebar {
+    width: 350px;
+    transform: translateX(-350px);
+  }
+}
+
+/* Desktop (large) */
+@media (min-width: 992px) {
+  .container {
+    max-width: 960px;
+  }
+  
+  .app-container {
+    padding: 1rem;
+    padding-top: 4.5rem;
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 1rem;
+    height: 100vh;
+  }
+  
+  .map-container {
+    width: 100%;
+    height: 100%;
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+  }
+  
+  .sidebar {
+    position: static;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    grid-column: 1;
+    grid-row: 1;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+  }
+  
+  .schedule-container {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0;
+  }
+  
+  .close-form {
+    display: none;
+  }
+  
+  /* Skryjeme toggle tlačítko v navigaci na desktopu */
+  .main-nav .toggle-btn {
+    display: none;
+  }
+  
+  .form-header {
+    justify-content: center;
+  }
+  
+  .form-header h2 {
+    text-align: center;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1140px;
+  }
+  
+  .app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+/* Tiskový styl */
+@media print {
+  .main-nav,
+  .sidebar,
+  .map-container,
+  .floating-btn,
+  .overlay {
+    display: none !important;
+  }
+  
+  .app-container {
+    padding: 0;
+    display: block;
+  }
+  
+  .schedule-container {
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+  }
+  
+  .schedule-header .actions {
+    display: none;
+  }
+  
+  .schedule-container th,
+  .schedule-container td {
+    padding: 10px;
+    font-size: 12pt;
   }
 }
