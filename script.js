@@ -563,40 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
     generateSchedule(scheduleItems);
   }
   
-  // Generování harmonogramu
-  function generateSchedule(scheduleItems) {
-    const scheduleBody = document.getElementById("schedule-body");
-    scheduleBody.innerHTML = "";
-    
-    scheduleItems.forEach((item, index) => {
-      const row = document.createElement('tr');
-      const h = item.time.getHours().toString().padStart(2, '0');
-      const m = item.time.getMinutes().toString().padStart(2, '0');
-      
-      // Určení typu řádku pro vizuální odlišení
-      if (item.label.includes("Odjezd ze Start")) {
-        row.className = "departure";
-      } else if (item.label.includes("Odjezd ze Zastávky")) {
-        row.className = "departure";
-      } else if (item.label.includes("Příjezd do Cíle")) {
-        row.className = "final-arrival";
-      } else if (item.label.includes("Příjezd do Zastávky")) {
-        row.className = "arrival";
-        
-        // Kontrola jestli je zastávka s fixovaným časem
-        if (item.fixed) {
-          row.className += " fixed-time";
-        }
-      }
-      
-      row.innerHTML = `
-        <td>${item.label}</td>
-        <td>${h}:${m}</td>
-        <td>${item.segment}</td>
-        <td>${item.cumulative}</td>
-      `;
-      scheduleBody.appendChild(row);
-    });
+  generateSchedule
     
     // Zobrazení harmonogramu a export tlačítek
     document.getElementById("schedule").style.display = "block";
