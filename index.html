@@ -116,10 +116,49 @@
     <i class="fas fa-map-marker-alt"></i>
   </button>
 
-  <!-- Skrytý textarea pro kopírování do schránky -->
-  <textarea id="copy-content" style="position: absolute; left: -9999px;"></textarea>
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="script.js"></script>
-</body>
-</html>
+// Aktualizovaná funkce pro kopírování harmonogramu do schránky
+function copyScheduleToClipboard() {
+  const scheduleTable = document.querySelector('.schedule-container');
+  const rows = scheduleTable.querySelectorAll('tbody tr');
+  let textContent = "ČASOVÝ HARMONOGRAM CESTY\n\n";
+  
+  rows.forEach(row => {
+    const columns = row.querySelectorAll('td');
+    const place = columns[0].textContent;
+    const arrival = columns[1].textContent;
+    const departure = columns[2].textContent;
+    const segment = columns[3].textContent;
+    const distance = columns[4].textContent;
+    
+    // Určení typu řádku pro lepší formátování
+    if (row.classList.contains('start-point')) {
+      textContent += `START: ${place}\n`;
+      textContent += `Odjezd: ${departure}\n`;
+    } else if (row.classList.contains('end-point')) {
+      textContent += `CÍL: ${place}\n`;
+      textContent += `Příjezd: ${arrival}\n`;
+    } else {
+      textContent += `ZASTÁVKA: ${place}\n`;
+      textContent += `Příjezd: ${arrival} | Odjezd: ${departure} | Přestávka: ${segment}\n`;
+    }
+    
+    textContent += `Vzdálenost: ${distance}\n\n`;
+  });
+  
+  const copyContent = document.getElementById('copy-content');
+  copyContent.value = textContent;
+  copyContent.select();
+  document.execCommand('copy');
+  
+  // Notifikace o zkopírování
+  const notification = document.createElement('div');
+  notification.className = 'notification';
+  notification.textContent = 'Harmonogram byl zkopírován do schránky!';
+  document.body.appendChild(notification);
+  
+  // Automaticky zmizí po 3 sekundách
+  setTimeout(() => {
+    notification.classList.add('hide');
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
