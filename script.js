@@ -75,6 +75,150 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+// === VALIDAČNÍ FUNKCE ===
+
+  // Validace formátu času (HH:MM)
+  function isValidTimeFormat(timeString) {
+    if (!timeString) return false;
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    return timeRegex.test(timeString);
+  }
+
+  // Převod času (HH:MM) na minuty od půlnoci
+  function timeToMinutes(timeString) {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  // Porovnání dvou časů (vrací true pokud time1 je před time2)
+  function isTimeBefore(time1, time2) {
+    return timeToMinutes(time1) < timeToMinutes(time2);
+  }
+
+  // Validace, zda fixovaný čas není dřív než čas odjezdu
+  function validateFixedTimeAfterDeparture(fixedTime, departureTime) {
+    if (!isValidTimeFormat(fixedTime) || !isValidTimeFormat(departureTime)) {
+      return { valid: false, message: 'Neplatný formát času.' };
+    }
+    
+    if (!isTimeBefore(departureTime, fixedTime) && timeToMinutes(fixedTime) !== timeToMinutes(departureTime)) {
+      return { 
+        valid: false, 
+        message: `Fixovaný čas (${fixedTime}) musí být po času odjezdu (${departureTime}).` 
+      };
+    }
+    
+    return { valid: true };
+  }
+
+  // Validace posloupnosti fixovaných časů mezi zastávkami
+  function validateFixedTimesSequence(stops, departureTime) {
+    let lastTime = departureTime;
+    
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
+      
+      if (stop.fixed && stop.fixedTime) {
+        if (!isValidTimeFormat(stop.fixedTime)) {
+          return { 
+            valid: false, 
+            message: `Neplatný formát času u zastávky ${i + 1}.` 
+          };
+        }
+        
+        // Kontrola, zda je fixovaný čas po předchozím času
+        if (!isTimeBefore(lastTime, stop.fixedTime) && timeToMinutes(lastTime) !== timeToMinutes(stop.fixedTime)) {
+          return { 
+            valid: false, 
+            message: `Fixovaný čas zastávky ${i + 1} (${stop.fixedTime}) musí být po předchozím času (${lastTime}).` 
+          };
+        }
+        
+        lastTime = stop.fixedTime;
+      }
+    }
+    
+    return { valid: true };
+  }
+
+  // Validace všech vstupů
+  function validateInputs(startAddr, endAddr, departureTime, stops) {
+    // Kontrola základních polí
+    if (!startAddr || startAddr.trim() === '') {
+      return { valid: false, message: 'Zadejte prosím adresu startu.' };
+    }
+    
+    if (!endAddr || endAddr.trim() === '') {
+      return { valid: false, message: 'Zadejte prosím adresu cíle.' };
+    }
+    
+    if (!departureTime || departureTime.trim() === '') {
+      return { valid: false, message: 'Zadejte prosím čas odjezdu.' };
+    }
+    
+    if (!isValidTimeFormat(departureTime)) {
+      return { valid: false, message: 'Neplatný formát času odjezdu.' };
+    }
+    
+    // Kontrola zastávek
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
+      
+      if (!stop.addr || stop.addr.trim() === '') {
+        return { valid: false, message: `Zadejte prosím adresu zastávky ${i + 1}.` };
+      }
+      
+      if (stop.break < 0) {
+        return { valid: false, message: `Doba přestávky u zastávky ${i + 1} nemůže být záporná.` };
+      }
+      
+      // Validace fixovaného času
+      if (stop.fixed && stop.fixedTime) {
+        const fixedValidation = validateFixedTimeAfterDeparture(stop.fixedTime, departureTime);
+        if (!fixedValidation.valid) {
+          return { 
+            valid: false, 
+            message: `Zastávka ${i + 1}: ${fixedValidation.message}` 
+          };
+        }
+      }
+    }
+    
+    // Validace posloupnosti fixovaných časů
+    const sequenceValidation = validateFixedTimesSequence(stops, departureTime);
+    if (!sequenceValidation.valid) {
+      return sequenceValidation;
+    }
+    
+    return { valid: true };
+  }
+
+  // Funkce pro zobrazení chybové zprávy
+  function showError(message) {
+    const errorNotification = document.createElement('div');
+    errorNotification.className = 'notification error-notification';
+    errorNotification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+    document.body.appendChild(errorNotification);
+    
+    setTimeout(() => {
+      errorNotification.classList.add('hide');
+      setTimeout(() => errorNotification.remove(), 300);
+    }, 5000);
+  }
+
+  // Funkce pro zobrazení úspěšné zprávy
+  function showSuccess(message) {
+    const successNotification = document.createElement('div');
+    successNotification.className = 'notification success-notification';
+    successNotification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(successNotification);
+    
+    setTimeout(() => {
+      successNotification.classList.add('hide');
+      setTimeout(() => successNotification.remove(), 300);
+    }, 3000);
+  }
+  
   // Optimalizovaná funkce pro vyhledávání
   async function fetchSuggestions(query) {
     // Omezíme vyhledávání na jeden dotaz pro zvýšení rychlosti
