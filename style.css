@@ -670,6 +670,11 @@ button#add-stop:hover {
   background-color: var(--success-color);
 }
 
+.notification.warning-notification {
+  background-color: var(--warning-color);
+  color: var(--dark-color);
+}
+
 /* Responzivní notifikace */
 @media (max-width: 767.98px) {
   .notification {
