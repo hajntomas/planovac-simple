@@ -219,16 +219,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 3000);
   }
   
-  // Optimalizovaná funkce pro vyhledávání
+// Optimalizovaná funkce pro vyhledávání s error handlingem
   async function fetchSuggestions(query) {
-    // Omezíme vyhledávání na jeden dotaz pro zvýšení rychlosti
     const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&limit=10&countrycodes=cz&q=${encodeURIComponent(query)}`;
     
     try {
-      const response = await fetch(url);
-      return await response.json();
+      // Kontrola online stavu
+      if (!isOnline()) {
+        console.warn('Offline - nelze načíst návrhy');
+        return [];
+      }
+      
+      const response = await fetchWithRetry(url, {}, 1); // Max 1 retry pro autocomplete
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error('Chyba při načítání návrhů:', err);
+      // Pro autocomplete nebudeme zobrazovat error notifikaci, jen vrátíme prázdné pole
       return [];
     }
   }
@@ -466,45 +473,63 @@ document.addEventListener('DOMContentLoaded', function() {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
 
-  // Geokódování adresy
+// Geokódování adresy s vylepšeným error handlingem
   async function geocodeAddress(address, inputElem) {
     if (inputElem.dataset.lat && inputElem.dataset.lon) {
       return [parseFloat(inputElem.dataset.lat), parseFloat(inputElem.dataset.lon)];
     }
+    
     const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(address)}`;
+    
     try {
-      const response = await fetch(url);
+      // Kontrola online stavu
+      if (!isOnline()) {
+        throw new Error('Nejste připojeni k internetu.');
+      }
+      
+      const response = await fetchWithRetry(url);
       const data = await response.json();
+      
       if (data && data.length > 0) {
         inputElem.dataset.lat = data[0].lat;
         inputElem.dataset.lon = data[0].lon;
         return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      } else {
+        throw new Error(`Adresa "${address}" nebyla nalezena. Zkuste ji upravit.`);
       }
     } catch (err) {
       console.error('Chyba při geokódování adresy:', err);
+      throw new Error(getErrorMessage(err, 'při geokódování adresy'));
     }
-    return null;
   }
 
-  // Získání trasy
+// Získání trasy s vylepšeným error handlingem
   async function fetchDrivingRoute(points) {
     const coords = points.map(pt => `${pt[1]},${pt[0]}`).join(';');
     const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`;
+    
     try {
-      const response = await fetch(url);
+      // Kontrola online stavu
+      if (!isOnline()) {
+        throw new Error('Nejste připojeni k internetu.');
+      }
+      
+      const response = await fetchWithRetry(url, {}, 2); // Max 2 retry pro routing
       const data = await response.json();
+      
       if (data && data.routes && data.routes.length > 0) {
         return {
           geometry: data.routes[0].geometry,
           legs: data.routes[0].legs
         };
+      } else if (data && data.code === 'NoRoute') {
+        throw new Error('Mezi zadanými místy nebyla nalezena žádná cesta. Zkuste změnit zadané adresy.');
       } else {
-        console.error('Neplatná odpověď z OSRM API', data);
-        return null;
+        throw new Error('Nepodařilo se vypočítat trasu.');
       }
     } catch (err) {
       console.error('Chyba při načítání trasy z OSRM API:', err);
-      return null;
+      throw new Error(getErrorMessage(err, 'při načítání trasy'));
     }
   }
 
