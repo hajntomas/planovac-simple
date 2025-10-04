@@ -643,6 +643,131 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // === ERROR HANDLING A OFFLINE DETEKCE ===
+
+  // Detekce offline stavu
+  function isOnline() {
+    return navigator.onLine;
+  }
+
+  // Zobrazení warning zprávy
+  function showWarning(message) {
+    const warningNotification = document.createElement('div');
+    warningNotification.className = 'notification warning-notification';
+    warningNotification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+    document.body.appendChild(warningNotification);
+    
+    setTimeout(() => {
+      warningNotification.classList.add('hide');
+      setTimeout(() => warningNotification.remove(), 300);
+    }, 5000);
+  }
+
+  // Vylepšené fetch s timeout a retry logikou
+  async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  // Retry logika pro API volání
+  async function fetchWithRetry(url, options = {}, maxRetries = 2) {
+    let lastError;
+    
+    for (let i = 0; i <= maxRetries; i++) {
+      try {
+        const response = await fetchWithTimeout(url, options);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response;
+      } catch (error) {
+        lastError = error;
+        
+        // Pokud je to abort/timeout a máme ještě pokusy, zkusíme znovu
+        if (i < maxRetries && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponenciální backoff
+          continue;
+        }
+        
+        // Jinak hodíme chybu
+        throw error;
+      }
+    }
+    
+    throw lastError;
+  }
+
+  // Zpracování různých typů chyb
+  function getErrorMessage(error, context = '') {
+    // Kontrola offline stavu
+    if (!isOnline()) {
+      return 'Nejste připojeni k internetu. Zkontrolujte prosím své připojení.';
+    }
+    
+    // Timeout chyby
+    if (error.name === 'AbortError') {
+      return `Požadavek trval příliš dlouho. ${context ? context + ' ' : ''}Zkuste to prosím znovu.`;
+    }
+    
+    // Network chyby
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      return 'Nepodařilo se připojit k serveru. Zkontrolujte své internetové připojení.';
+    }
+    
+    // HTTP chyby
+    if (error.message.includes('HTTP error')) {
+      const status = error.message.match(/status: (\d+)/)?.[1];
+      switch (status) {
+        case '404':
+          return 'Požadovaná data nebyla nalezena.';
+        case '429':
+          return 'Příliš mnoho požadavků. Prosím počkejte chvíli a zkuste to znovu.';
+        case '500':
+        case '502':
+        case '503':
+          return 'Server je dočasně nedostupný. Zkuste to prosím později.';
+        default:
+          return `Chyba serveru (${status}). Zkuste to prosím znovu.`;
+      }
+    }
+    
+    // OSRM specifické chyby
+    if (context.includes('trasa') && error.message.includes('No route found')) {
+      return 'Nepodařilo se najít trasu mezi zadanými místy. Zkuste změnit zadané adresy.';
+    }
+    
+    // Geokódování chyby
+    if (context.includes('geokódování')) {
+      return 'Nepodařilo se najít zadanou adresu. Zkuste ji upravit nebo použít jinou.';
+    }
+    
+    // Obecná chyba
+    return error.message || 'Nastala neočekávaná chyba. Zkuste to prosím znovu.';
+  }
+
+  // Listener pro změnu online/offline stavu
+  window.addEventListener('online', () => {
+    showSuccess('Připojení k internetu bylo obnoveno.');
+  });
+
+  window.addEventListener('offline', () => {
+    showWarning('Ztratili jste připojení k internetu.');
+  });
+  
   // Přidání markeru na mapu
   function addMarker(coords, popupText, type) {
     const markerOptions = {};
