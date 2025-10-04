@@ -589,34 +589,60 @@ document.addEventListener('DOMContentLoaded', function() {
     planBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Plánuji trasu...';
     planBtn.disabled = true;
 
-    try {
-      // Geokódování startu a cíle
-      const startCoords = await geocodeAddress(startInput.value, startInput);
-      const endCoords = await geocodeAddress(endInput.value, endInput);
-      if (!startCoords || !endCoords) {
-        throw new Error('Nepodařilo se geokódovat zadanou adresu.');
+try {
+      // Kontrola online stavu před začátkem
+      if (!isOnline()) {
+        throw new Error('Nejste připojeni k internetu. Zkontrolujte prosím své připojení.');
       }
+
+      // Geokódování startu a cíle
+      let startCoords, endCoords;
+      
+      try {
+        startCoords = await geocodeAddress(startInput.value, startInput);
+      } catch (err) {
+        throw new Error(`Chyba při geokódování startu: ${err.message}`);
+      }
+      
+      try {
+        endCoords = await geocodeAddress(endInput.value, endInput);
+      } catch (err) {
+        throw new Error(`Chyba při geokódování cíle: ${err.message}`);
+      }
+      
+      if (!startCoords || !endCoords) {
+        throw new Error('Nepodařilo se najít zadané adresy. Zkuste je upravit.');
+      }
+      
       currentRoute.start = { coords: startCoords, addr: startInput.value };
       currentRoute.end = { coords: endCoords, addr: endInput.value };
 
       // Zpracování zastávek
       currentRoute.stops = [];
-      for (let field of stopFields) {
+      for (let i = 0; i < stopFields.length; i++) {
+        const field = stopFields[i];
         const stopInput = field.querySelector('.stop-input');
+        
         if (stopInput.value.trim()) {
-          const coords = await geocodeAddress(stopInput.value, stopInput);
-          const breakInput = field.querySelector('.break-time');
-          const breakDuration = parseInt(breakInput.value) || 30;
-          const fixCheckbox = field.querySelector('input[type="checkbox"]');
-          const fixedTimeInput = field.querySelector('input.fixed-time');
-          let fixed = false;
-          let fixedTime = "";
-          if (fixCheckbox && fixCheckbox.checked && fixedTimeInput.value) {
-            fixed = true;
-            fixedTime = fixedTimeInput.value;
-          }
-          if (coords) {
-            currentRoute.stops.push({ coords, addr: stopInput.value, break: breakDuration, fixed, fixedTime });
+          try {
+            const coords = await geocodeAddress(stopInput.value, stopInput);
+            const breakInput = field.querySelector('.break-time');
+            const breakDuration = parseInt(breakInput.value) || 30;
+            const fixCheckbox = field.querySelector('input[type="checkbox"]');
+            const fixedTimeInput = field.querySelector('input.fixed-time');
+            let fixed = false;
+            let fixedTime = "";
+            
+            if (fixCheckbox && fixCheckbox.checked && fixedTimeInput.value) {
+              fixed = true;
+              fixedTime = fixedTimeInput.value;
+            }
+            
+            if (coords) {
+              currentRoute.stops.push({ coords, addr: stopInput.value, break: breakDuration, fixed, fixedTime });
+            }
+          } catch (err) {
+            throw new Error(`Chyba při geokódování zastávky ${i + 1}: ${err.message}`);
           }
         }
       }
@@ -637,10 +663,18 @@ document.addEventListener('DOMContentLoaded', function() {
       addMarker(endCoords, "Cíl: " + endInput.value, 'end');
 
       // Získání trasy z OSRM API
-      const routeData = await fetchDrivingRoute(routePoints);
-      if (!routeData) {
-        throw new Error('Nepodařilo se načíst trasu z OSRM API.');
+      let routeData;
+      try {
+        routeData = await fetchDrivingRoute(routePoints);
+      } catch (err) {
+        // Ponecháme markery na mapě, ale odstraníme je jen pokud se načítání úplně nezdařilo
+        throw err;
       }
+      
+      if (!routeData) {
+        throw new Error('Nepodařilo se načíst trasu. Zkuste to prosím znovu.');
+      }
+      
       const routeCoords = routeData.geometry.coordinates.map(c => [c[1], c[0]]);
       currentPolyline = L.polyline(routeCoords, { color: 'blue', weight: 5, opacity: 0.7 }).addTo(map);
       
@@ -659,9 +693,15 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleSidebar();
       }
     } catch (error) {
-      showError(error.message || 'Nastala chyba při plánování trasy.');
-      console.error(error);
+      // Zpracování chyby s user-friendly zprávou
+      const errorMessage = getErrorMessage(error, 'při plánování trasy');
+      showError(errorMessage);
+      console.error('Chyba při plánování trasy:', error);
     } finally {
+      // Obnovení tlačítka
+      planBtn.innerHTML = originalBtnText;
+      planBtn.disabled = false;
+    }
       // Obnovení tlačítka
       planBtn.innerHTML = originalBtnText;
       planBtn.disabled = false;
