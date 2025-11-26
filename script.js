@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Deklarace elementů na začátku pro sdílené použití
+  const mapContainer = document.querySelector('.map-container');
+  const sidebar = document.getElementById('planForm');
+
   // Pro lepší responzivitu na mobilech nastavíme výšku viewport
   function setMobileHeight() {
     // Nastavení výšky na viditelnou oblast prohlížeče - opraveno
     const vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--vh', `${vh}px`);
-    
-    // Úprava stylu pro mobilní zobrazení
-    const mapContainer = document.querySelector('.map-container');
-    const sidebar = document.getElementById('planForm');
     
     if (window.innerWidth < 992) {
       // Mobilní zobrazení - full výška pro mapu
@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const toggleFormBtn = document.getElementById('toggleFormBtn');
   const closeFormBtn = document.getElementById('closeFormBtn');
   const floatingPlanBtn = document.getElementById('floatingPlanBtn');
-  const sidebar = document.getElementById('planForm');
   const overlay = document.getElementById('overlay');
 
   // Responzivní přepínání mezi formulářem a mapou na mobilní verzi
@@ -1205,8 +1204,6 @@ try {
     
     // Musíme také upravit výšku pro iOS
     function fixIOSHeight() {
-      const mapContainer = document.querySelector('.map-container');
-      const sidebar = document.getElementById('planForm');
       const viewportHeight = window.innerHeight;
       
       mapContainer.style.height = `${viewportHeight - 56}px`; // 3.5rem = 56px
