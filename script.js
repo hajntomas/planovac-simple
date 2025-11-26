@@ -472,8 +472,20 @@ document.addEventListener('DOMContentLoaded', function() {
   const startSuggestions = document.getElementById('start-suggestions');
   const endSuggestions = document.getElementById('end-suggestions');
 
-  startInput.addEventListener('input', debounce(() => showSuggestions(startInput, startSuggestions), 400));
-  endInput.addEventListener('input', debounce(() => showSuggestions(endInput, endSuggestions), 400));
+  const startDebounced = debounce(() => showSuggestions(startInput, startSuggestions), 400);
+  const endDebounced = debounce(() => showSuggestions(endInput, endSuggestions), 400);
+
+  startInput.addEventListener('input', () => {
+    delete startInput.dataset.lat;
+    delete startInput.dataset.lon;
+    startDebounced();
+  });
+
+  endInput.addEventListener('input', () => {
+    delete endInput.dataset.lat;
+    delete endInput.dataset.lon;
+    endDebounced();
+  });
 
   // Skrytí našeptávače při kliknutí mimo něj
   document.addEventListener('click', function(e) {
@@ -513,7 +525,12 @@ document.addEventListener('DOMContentLoaded', function() {
     suggestions.className = 'suggestions';
     inputWrapper.appendChild(suggestions);
 
-    stopInput.addEventListener('input', debounce(() => showSuggestions(stopInput, suggestions), 400));
+    const stopDebounced = debounce(() => showSuggestions(stopInput, suggestions), 400);
+    stopInput.addEventListener('input', () => {
+      delete stopInput.dataset.lat;
+      delete stopInput.dataset.lon;
+      stopDebounced();
+    });
 
     // Skrytí našeptávače při kliknutí mimo něj
     document.addEventListener('click', function(e) {
